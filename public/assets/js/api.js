@@ -261,14 +261,22 @@ class API {
         });
     }
 
-    async generarCartaAceptacion(solicitudID, numeroExpediente, formato, $nombreDirector, $cargoDirector) {
-        return this.post('/solicitudes/generarCartaAceptacion', {
+    async generarCartaAceptacion(solicitudID, numeroExpediente, formato, nombreDirector, cargoDirector) {
+        // 🔹 Validar respuesta del servidor para la carta de aceptación
+        const response = await this.post('/solicitudes/generarCartaAceptacion', {
             solicitudID,
             numeroExpediente,
             formato,
-            nombreDirector: $nombreDirector,
-            cargoDirector: $cargoDirector
+            nombreDirector,
+            cargoDirector
         });
+        console.log("este es el response: ", response);
+
+        if (!response.archivo || !response.archivo.url) {
+            throw new Error('El archivo de la carta no está disponible en el servidor.');
+        }
+
+        return response;
     }
 
     async verificarSolicitudParaCarta(solicitudID) {

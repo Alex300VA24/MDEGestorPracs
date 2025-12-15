@@ -1,4 +1,3 @@
-
 window.initPracticantes = function() {
     console.log("Practicantes iniciado");
     // TODO: aquí va tu código que antes se ejecutaba automáticamente
@@ -89,17 +88,29 @@ window.initPracticantes = function() {
     }
 
     /* Captura evento del boton Aplicar filtros a la tabla de Practicantes */
+    // Modify the filter application logic to ensure AreaID is set correctly
     document.getElementById('btnAplicarFiltros')?.addEventListener('click', async () => {
         const nombre = document.getElementById('filtroNombre').value || '';
-        const areaID = document.getElementById('filtroArea').value;
+        let areaID = document.getElementById('filtroArea').value;
 
-        const filtros = { nombre: nombre || null,
-                        areaID: areaID || null };
-        
+        // Ensure AreaID defaults to the user's AreaID if not RRHH
+        const areaIDUsuario = parseInt(sessionStorage.getItem('areaID')) || null;
+        const nombreAreaUsuario = sessionStorage.getItem('nombreArea');
+        const esRRHH = nombreAreaUsuario === 'Gerencia de Recursos Humanos';
+
+        if (!esRRHH && (!areaID || areaID === 'null')) {
+            areaID = areaIDUsuario;
+        }
+
+        const filtros = { 
+            nombre: nombre || null,
+            areaID: areaID || null 
+        };
+
         try {
             const response = await api.filtrarPracticantes(filtros);
-            
-            if(response.success) {
+
+            if (response.success) {
                 actualizarTablaPracticantes(response.data);
             } else {
                 mostrarAlerta({
@@ -142,7 +153,7 @@ window.initPracticantes = function() {
             ? practicantes
             : practicantes.filter(p => {
                 const areaPracticante = p.NombreArea || p.Area;
-                return areaPracticante === nombreAreaUsuario;
+                return areaPracticante && areaPracticante.trim() === nombreAreaUsuario.trim();
             });
 
         if (practicantesFiltrados.length === 0) {
@@ -378,7 +389,9 @@ window.initPracticantes = function() {
                 const estadoBadge = `<span class="status-badge status-${estadoClass}">${estadoDescripcion.toUpperCase()}</span>`;
 
                 // Mostrar botón de aceptar solo si pertenece al área del usuario y es “Pendiente”
-                const mostrarBotonAceptar = !esRRHH && areaNombre === nombreAreaUsuario && estadoDescripcion === 'Pendiente';
+                console.log(esRRHH, areaNombre, nombreAreaUsuario, estadoDescripcion);
+                
+                const mostrarBotonAceptar = (areaNombre === nombreAreaUsuario) && estadoDescripcion === 'Pendiente';
                 // Construir fila
                 fila.innerHTML = `
                     <td>${p.DNI}</td>

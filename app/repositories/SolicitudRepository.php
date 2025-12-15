@@ -368,7 +368,7 @@ class SolicitudRepository {
         return [
             'ruta' => $rutaArchivo,
             'nombre' => $nombreArchivo,
-            'url' => '/gestorPracticantes/public/cartas/' . $nombreArchivo
+            'url' => '/MDEGestorPracs/public/cartas/' . $nombreArchivo
         ];
     }
 
@@ -533,7 +533,7 @@ class SolicitudRepository {
         return [
             'ruta' => $rutaArchivo,
             'nombre' => $nombreArchivo,
-            'url' => '/gestorPracticantes/public/cartas/' . $nombreArchivo
+            'url' => '/MDEGestorPracs/public/cartas/' . $nombreArchivo
         ];
     }
 

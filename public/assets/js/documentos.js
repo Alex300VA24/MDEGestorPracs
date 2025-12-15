@@ -1,4 +1,3 @@
-
 window.initDocumentos = function() {
     console.log("Documentos iniciado");
     if (window.documentosInicializado) {
@@ -426,6 +425,38 @@ window.initDocumentos = function() {
         }
     });
 
+    // 🔹 Actualizar lista de practicantes dinámicamente
+    window.actualizarListaPracticantes = async function() {
+        try {
+            const practicantes = await api.listarNombrePracticantes();
+
+            if (!practicantes || !Array.isArray(practicantes)) {
+                console.warn("La respuesta de la API no es un array válido de practicantes.");
+                return; 
+            }
+
+            // Limpiar opciones existentes
+            selectPracticanteDoc.innerHTML = "";
+            selectPracticanteModal.innerHTML = "";
+
+            // Agregar nuevas opciones
+            practicantes.forEach(p => {
+                const option1 = new Option(p.NombreCompleto, p.PracticanteID);
+                const option2 = new Option(p.NombreCompleto, p.PracticanteID);
+                selectPracticanteDoc.add(option1);
+                selectPracticanteModal.add(option2);
+            });
+
+        } catch (err) {
+            console.error("Error actualizando practicantes:", err);
+            mostrarAlerta({
+                tipo: 'error',
+                titulo: 'Error',
+                mensaje: err.message || 'Error al actualizar la lista de practicantes'
+            });
+        }
+    };
+
     function openModal(id) {
         const modal = document.getElementById(id);
         if (modal) {
@@ -597,6 +628,17 @@ window.initDocumentos = function() {
         `;
 
         contenedor.innerHTML = tabla;
+
+        // 🔹 Persistir estado del botón deshabilitado
+        if (solicitudEnviada) {
+            localStorage.setItem(`solicitud_${solicitudID}_enviada`, true);
+        }
+
+        // 🔹 Restaurar estado del botón al cargar
+        const estadoGuardado = localStorage.getItem(`solicitud_${solicitudID}_enviada`);
+        if (estadoGuardado) {
+            document.getElementById("btnEnviarSolicitudArea").disabled = true;
+        }
     }
 
     function abrirDialogCarta() {
@@ -705,9 +747,18 @@ window.initDocumentos = function() {
                 cargoDirector
             );
 
+            console.log("Este es el resultado: ", resultado);
+
             if (resultado.success) {
                 mostrarMensaje('Carta generada exitosamente', 'exito');
                 
+                console.log("Este es el archivo: ", resultado.archivo);
+                console.log('Esta es la url: ', resultado.archivo.url);
+                // 🔹 Validar URL antes de descargar
+                if (!resultado.archivo || !resultado.archivo.url) {
+                    throw new Error('El archivo de la carta no está disponible en el servidor.');
+                }
+
                 // Descargar el archivo automáticamente
                 const link = document.createElement('a');
                 link.href = resultado.archivo.url;

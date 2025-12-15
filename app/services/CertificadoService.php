@@ -79,7 +79,7 @@ class CertificadoService {
             'success' => true,
             'message' => 'Certificado generado exitosamente. El practicante ha sido marcado como Finalizado.',
             'nombreArchivo' => $nombreArchivo,
-            'url' => '/gestorPracticantes/public/certificados/' . $nombreArchivo
+            'url' => '/MDEGestorPracs/public/certificados/' . $nombreArchivo
         ];
     }
 

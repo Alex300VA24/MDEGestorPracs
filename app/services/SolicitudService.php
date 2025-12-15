@@ -179,7 +179,7 @@ class SolicitudService {
                 error_log("Archivo creado exitosamente en: " . $archivo['ruta']);
 
                 // Registrar la generación de la carta (opcional - para auditoría)
-                $this->registrarGeneracionCarta($solicitudID, $numeroExpediente, $formato);
+                $this->registrarGeneracionCarta($solicitudID, $numeroExpediente, $formato, $nombreDirector, $cargoDirector);
 
                 return [
                     'success' => true,
@@ -216,9 +216,9 @@ class SolicitudService {
      * Registrar en log o tabla de auditoría la generación de la carta
      * (Opcional - puedes crear una tabla de auditoría si lo necesitas)
      */
-    private function registrarGeneracionCarta($solicitudID, $numeroExpediente, $formato) {
+    private function registrarGeneracionCarta($solicitudID, $numeroExpediente, $formato, $nombreDirector, $cargoDirector) {
         try {
-            error_log("Carta generada - Solicitud: $solicitudID, Expediente: $numeroExpediente, Formato: $formato");
+            error_log("Carta generada - Solicitud: $solicitudID, Expediente: $numeroExpediente, Formato: $formato, Nombre Director: $nombreDirector, Cargo: $cargoDirector");
             
             // Si deseas guardar en una tabla de auditoría, puedes hacerlo aquí:
             // $this->repo->insertarLogGeneracionCarta($solicitudID, $numeroExpediente, $formato);
