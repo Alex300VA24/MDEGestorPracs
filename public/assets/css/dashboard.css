@@ -1,0 +1,717 @@
+/* ============================================
+   DASHBOARD PRINCIPAL Y NAVEGACIÓN
+   Versión: 2.0 Professional
+   ============================================ */
+
+:root {
+    /* Colores del Sidebar */
+    --sidebar-bg-start: #1a2332;
+    --sidebar-bg-end: #2c3e50;
+    --sidebar-text: #ecf0f1;
+    --sidebar-text-muted: #95a5a6;
+    --sidebar-hover: rgba(255, 255, 255, 0.15);
+    --sidebar-active: rgba(102, 126, 234, 0.2);
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+    
+    /* Colores Principales */
+    --primary-500: #667eea;
+    --primary-600: #5568d3;
+    
+    --danger-500: #ef4444;
+    --danger-600: #dc2626;
+    
+    /* Escala de Grises */
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-500: #6b7280;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    
+    /* Sombras */
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.15);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    
+    /* Bordes y Radios */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+    
+    /* Transiciones */
+    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Espaciado */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 0.75rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 2.5rem;
+    
+    /* Tipografía */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+}
+
+/* ============================================
+   RESET Y BASE
+   ============================================ */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background-color: var(--gray-50);
+    height: 100vh;
+    overflow-x: hidden;
+    color: var(--gray-900);
+}
+
+/* ============================================
+   DASHBOARD PRINCIPAL
+   ============================================ */
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+    background: var(--gray-50);
+}
+
+/* ============================================
+   SIDEBAR
+   ============================================ */
+.sideBar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 280px;
+    height: 100vh;
+    background: linear-gradient(180deg, var(--sidebar-bg-start) 0%, var(--sidebar-bg-end) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow-y: auto;
+    box-shadow: var(--shadow-2xl);
+    z-index: 1000;
+    transition: var(--transition-smooth);
+}
+
+/* Scrollbar personalizado para el sidebar */
+.sideBar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sideBar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.sideBar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-full);
+}
+
+.sideBar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================
+   HEADER DEL SIDEBAR
+   ============================================ */
+.sidebar-header {
+    padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-2xl);
+    text-align: center;
+    border-bottom: 1px solid var(--sidebar-border);
+    background: rgba(0, 0, 0, 0.15);
+    position: relative;
+}
+
+.sidebar-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary-500), transparent);
+    border-radius: var(--radius-full);
+}
+
+.sidebar-logo {
+    width: 70px;
+    height: 70px;
+    margin: 0 auto var(--spacing-md);
+    border-radius: var(--radius-full);
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: var(--transition-smooth);
+    display: block;
+}
+
+.sidebar-logo:hover {
+    transform: scale(1.05);
+    border-color: var(--primary-500);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.sidebar-title {
+    color: white;
+    font-size: 1.375rem;
+    margin-bottom: var(--spacing-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-subtitle {
+    color: var(--sidebar-text-muted);
+    font-size: 0.875rem;
+    font-weight: var(--font-weight-medium);
+    letter-spacing: 0.3px;
+}
+
+/* ============================================
+   OPCIONES DEL SIDEBAR
+   ============================================ */
+.option {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-md) var(--spacing-lg);
+    color: var(--sidebar-text);
+    text-decoration: none;
+    transition: var(--transition-base);
+    margin: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.option::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 70%;
+    background: var(--primary-500);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    transition: var(--transition-base);
+}
+
+.option:hover {
+    background: var(--sidebar-hover);
+    color: white;
+    transform: translateX(4px);
+}
+
+.option:hover::before {
+    width: 4px;
+}
+
+.option.active {
+    background: var(--sidebar-active);
+    color: white;
+    font-weight: var(--font-weight-semibold);
+    box-shadow: inset 0 0 0 1px rgba(102, 126, 234, 0.3);
+}
+
+.option.active::before {
+    width: 4px;
+}
+
+/* Animación de ripple al hacer clic */
+.option::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.option:active::after {
+    opacity: 1;
+    transition: opacity 0s;
+}
+
+.containerIconOption {
+    margin-right: var(--spacing-md);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.1);
+    transition: var(--transition-base);
+}
+
+.option:hover .containerIconOption,
+.option.active .containerIconOption {
+    background: rgba(102, 126, 234, 0.3);
+    transform: scale(1.1);
+}
+
+.containerIconOption i {
+    font-size: 16px;
+    transition: var(--transition-base);
+}
+
+.option:hover .containerIconOption i,
+.option.active .containerIconOption i {
+    transform: scale(1.15);
+}
+
+.option p {
+    margin: 0;
+    font-size: 0.9375rem;
+    letter-spacing: 0.3px;
+}
+
+/* ============================================
+   INFORMACIÓN DEL USUARIO
+   ============================================ */
+.user-info {
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: var(--spacing-xl) var(--spacing-lg);
+    text-align: center;
+    border-top: 1px solid var(--sidebar-border);
+    margin-top: auto;
+}
+
+.user-info > div:first-child {
+    font-size: 1rem;
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--spacing-xs);
+    color: white;
+}
+
+#currentUserRole {
+    font-size: 0.8125rem;
+    color: var(--sidebar-text-muted);
+    margin-bottom: var(--spacing-lg);
+    line-height: 1.4;
+}
+
+/* ============================================
+   BOTÓN DE LOGOUT
+   ============================================ */
+.logout-btn {
+    position: relative;
+    background: linear-gradient(135deg, var(--danger-500), var(--danger-600));
+    color: white;
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: var(--font-weight-medium);
+    width: 100%;
+    margin-top: var(--spacing-md);
+    transition: var(--transition-smooth);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.logout-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+    opacity: 0;
+    transition: var(--transition-base);
+}
+
+.logout-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.logout-btn:hover::before {
+    opacity: 1;
+}
+
+.logout-btn:active {
+    transform: translateY(0);
+}
+
+.logout-btn i {
+    margin-right: var(--spacing-xs);
+}
+
+/* ============================================
+   CONTENIDO PRINCIPAL
+   ============================================ */
+.main-content {
+    margin-left: 280px;
+    padding: var(--spacing-xl);
+    min-height: 100vh;
+    background: var(--gray-50);
+    width: calc(100% - 280px);
+    overflow-y: auto;
+}
+
+.page-content {
+    display: none;
+    animation: fadeIn 0.4s ease;
+}
+
+.page-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================
+   UTILIDAD: HIDDEN
+   ============================================ */
+.hidden {
+    display: none !important;
+}
+
+/* ============================================
+   MODAL DE CONFIRMACIÓN DE LOGOUT
+   ============================================ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: fadeInOverlay 0.3s ease;
+    padding: var(--spacing-md);
+}
+
+@keyframes fadeInOverlay {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-overlay .modal-content {
+    background: white;
+    padding: var(--spacing-2xl);
+    border-radius: var(--radius-2xl);
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: var(--shadow-2xl);
+    animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid var(--gray-200);
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.modal-overlay .modal-content h3 {
+    color: var(--gray-900);
+    font-size: 1.375rem;
+    font-weight: var(--font-weight-bold);
+    margin: 0 0 var(--spacing-sm) 0;
+    letter-spacing: -0.01em;
+}
+
+.modal-overlay .modal-content p {
+    color: var(--gray-600);
+    font-size: 0.9375rem;
+    margin: 0 0 var(--spacing-xl) 0;
+    line-height: 1.6;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-md);
+}
+
+.btn-cancel,
+.btn-logout {
+    border: none;
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-sm) var(--spacing-xl);
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: var(--font-weight-medium);
+    transition: var(--transition-base);
+    box-shadow: var(--shadow-sm);
+    min-width: 120px;
+}
+
+.btn-cancel {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-cancel:hover {
+    background: var(--gray-200);
+    transform: translateY(-1px);
+}
+
+.btn-logout {
+    background: linear-gradient(135deg, var(--danger-500), var(--danger-600));
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-logout::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+    opacity: 0;
+    transition: var(--transition-base);
+}
+
+.btn-logout:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-logout:hover::before {
+    opacity: 1;
+}
+
+.btn-logout:active,
+.btn-cancel:active {
+    transform: translateY(0);
+}
+
+/* ============================================
+   BADGES
+   ============================================ */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.badge-success {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.badge-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+}
+
+.badge-warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.badge-info {
+    background: linear-gradient(135deg, #06b6d4, #0891b2);
+    color: white;
+}
+
+.badge-secondary {
+    background: linear-gradient(135deg, #6b7280, #4b5563);
+    color: white;
+}
+
+/* ============================================
+   BOTONES PEQUEÑOS
+   ============================================ */
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+    border-radius: var(--radius-sm);
+    margin: 0.125rem;
+}
+
+/* ============================================
+   DISEÑO RESPONSIVO
+   ============================================ */
+@media (max-width: 1024px) {
+    .sideBar {
+        width: 260px;
+    }
+    
+    .main-content {
+        margin-left: 260px;
+        width: calc(100% - 260px);
+    }
+}
+
+@media (max-width: 768px) {
+    .sideBar {
+        width: 240px;
+        transform: translateX(-100%);
+    }
+    
+    .sideBar.mobile-open {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: var(--spacing-lg);
+    }
+}
+
+@media (max-width: 480px) {
+    .sideBar {
+        width: 100%;
+    }
+    
+    .main-content {
+        padding: var(--spacing-md);
+    }
+    
+    .sidebar-header {
+        padding: var(--spacing-lg);
+    }
+    
+    .sidebar-logo {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .sidebar-title {
+        font-size: 1.25rem;
+    }
+    
+    .option {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+    
+    .user-info {
+        padding: var(--spacing-lg);
+    }
+    
+    .modal-overlay .modal-content {
+        padding: var(--spacing-lg);
+    }
+    
+    .modal-buttons {
+        flex-direction: column;
+    }
+    
+    .btn-cancel,
+    .btn-logout {
+        width: 100%;
+    }
+}
+
+/* ============================================
+   ANIMACIONES Y EFECTOS
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================
+   MODO IMPRESIÓN
+   ============================================ */
+@media print {
+    .sideBar,
+    .logout-btn,
+    .modal-overlay {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 0;
+    }
+}
+
+/* Estilos para Actividad Reciente */
+#actividadReciente {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.actividad-item {
+    padding: 12px;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s;
+}
+
+.actividad-item:hover {
+    background-color: #f8f9fa;
+}
+
+.actividad-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    min-width: 40px;
+    text-align: center;
+}
+
+#actividadReciente::-webkit-scrollbar {
+    width: 6px;
+}
+
+#actividadReciente::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#actividadReciente::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+#actividadReciente::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

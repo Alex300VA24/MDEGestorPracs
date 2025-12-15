@@ -1,0 +1,36 @@
+.env
+/cartas/
+
+.encryption_key
+
+# Dependencies
+/vendor/
+
+# Cache directories
+/cache/
+
+# Logs
+/logs/
+
+# PHPUnit
+/coverage/
+.phpunit.result.cache
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+
+# Manuales y documentación
+/manuals/
+
+
+/public/assets/js/sweetalert2/README.md

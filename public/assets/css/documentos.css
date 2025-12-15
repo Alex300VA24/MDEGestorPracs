@@ -1,0 +1,664 @@
+/* ============================================
+   SISTEMA DE GESTIÓN DE DOCUMENTOS
+   Versión: 2.0 Professional
+   ============================================ */
+
+:root {
+    /* Paleta de Colores Principal */
+    --primary-50: #f0f4ff;
+    --primary-100: #e0e9ff;
+    --primary-500: #667eea;
+    --primary-600: #5568d3;
+    --primary-700: #4451b8;
+    
+    --success-50: #ecfdf5;
+    --success-500: #10b981;
+    --success-600: #059669;
+    --success-700: #047857;
+    
+    --warning-500: #f59e0b;
+    --warning-600: #d97706;
+    
+    --danger-500: #ef4444;
+    --danger-600: #dc2626;
+    
+    --info-500: #06b6d4;
+    --info-600: #0891b2;
+    
+    /* Escala de Grises */
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    
+    /* Sombras Profesionales */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    
+    /* Bordes y Radios */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+    
+    /* Transiciones */
+    --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Espaciado */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 0.75rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    
+    /* Tipografía */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+}
+
+/* ============================================
+   CONTENEDOR PRINCIPAL DE DOCUMENTOS
+   ============================================ */
+.documentos-container {
+    width: 100%;
+    padding: var(--spacing-xl);
+    max-width: 1440px;
+    margin: 0 auto;
+    font-family: var(--font-sans);
+    color: var(--gray-900);
+    line-height: 1.6;
+}
+
+
+/* ============================================
+   HEADER DE PÁGINA
+   ============================================ */
+.page-header {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    margin-bottom: var(--spacing-xl);
+    border: 1px solid var(--gray-200);
+    transition: var(--transition-smooth);
+}
+
+.page-header:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.page-header .card-title {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--gray-900);
+    margin: 0 0 var(--spacing-lg) 0;
+    padding-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--gray-200);
+    letter-spacing: -0.01em;
+}
+
+/* ============================================
+   DOCUMENTOS REQUERIDOS
+   ============================================ */
+#documentosRequeridos {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+#listaDocumentos {
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+/* ============================================
+   GRUPOS DE FORMULARIO
+   ============================================ */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
+}
+
+.form-group label {
+    font-weight: var(--font-weight-medium);
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+}
+
+.form-group select,
+.form-group input[type="text"],
+.form-group input[type="file"],
+.form-group textarea {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 0.9375rem;
+    font-family: var(--font-sans);
+    color: var(--gray-900);
+    background: white;
+    transition: var(--transition-base);
+}
+
+.form-group select:hover,
+.form-group input[type="text"]:hover,
+.form-group textarea:hover {
+    border-color: var(--gray-400);
+}
+
+.form-group select:focus,
+.form-group input[type="text"]:focus,
+.form-group input[type="file"]:focus,
+.form-group textarea:focus {
+    border-color: var(--primary-500);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+    line-height: 1.5;
+}
+
+.form-group textarea::placeholder {
+    color: var(--gray-400);
+}
+
+/* Estilos para input file */
+.form-group input[type="file"] {
+    padding: 0.5rem;
+    cursor: pointer;
+}
+
+.form-group input[type="file"]::file-selector-button {
+    padding: 0.5rem 1rem;
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    color: var(--gray-700);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: var(--transition-base);
+    margin-right: var(--spacing-sm);
+}
+
+.form-group input[type="file"]::file-selector-button:hover {
+    background: var(--gray-200);
+}
+
+/* ============================================
+   MODALES
+   ============================================ */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-md);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Modal Content Estándar */
+.modal-content {
+    background: white;
+    width: 100%;
+    max-width: 600px;
+    border-radius: var(--radius-2xl);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-2xl);
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid var(--gray-200);
+}
+
+.modal-content h3 {
+    text-align: center;
+    color: var(--gray-900);
+    margin: 0 0 var(--spacing-xl) 0;
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: -0.02em;
+}
+
+/* Modal Content Custom */
+.modal-content-custom {
+    background: white;
+    width: 100%;
+    max-width: 700px;
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-2xl);
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--gray-200);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Header del Modal Custom */
+.modal-header-custom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-bottom: 1px solid var(--gray-200);
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--primary-50) 100%);
+}
+
+.modal-header-custom h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--gray-900);
+    letter-spacing: -0.02em;
+}
+
+.modal-header-custom .close {
+    background: transparent;
+    border: none;
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    transition: var(--transition-base);
+}
+
+.modal-header-custom .close:hover {
+    background: var(--gray-200);
+    color: var(--gray-900);
+    transform: rotate(90deg);
+}
+
+/* Body del Modal Custom */
+.modal-body-custom {
+    padding: var(--spacing-xl);
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Scrollbar personalizado */
+.modal-content::-webkit-scrollbar,
+.modal-body-custom::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track,
+.modal-body-custom::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: var(--radius-full);
+}
+
+.modal-content::-webkit-scrollbar-thumb,
+.modal-body-custom::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: var(--radius-full);
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover,
+.modal-body-custom::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+/* ============================================
+   FORMULARIOS EN MODALES
+   ============================================ */
+#formEnviarSolicitud,
+#formSubirDocumento {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+#formEnviarSolicitud button[type="submit"],
+#formSubirDocumento button[type="submit"] {
+    margin-top: var(--spacing-sm);
+}
+
+#formEnviarSolicitud button[type="button"],
+#formSubirDocumento button[type="button"] {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    color: var(--gray-700);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-base);
+    font-weight: var(--font-weight-medium);
+    font-size: 0.9375rem;
+}
+
+#formEnviarSolicitud button[type="button"]:hover,
+#formSubirDocumento button[type="button"]:hover {
+    background: var(--gray-200);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ============================================
+   CONTENEDOR DE ARCHIVO ACTUAL
+   ============================================ */
+#contenedorArchivoActual {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+#contenedorArchivoActual:empty {
+    display: none;
+}
+
+#contenedorArchivoActual i {
+    color: var(--primary-500);
+    font-size: 1.25rem;
+}
+
+#contenedorArchivoActual a {
+    color: var(--primary-600);
+    text-decoration: none;
+    font-weight: var(--font-weight-medium);
+    transition: var(--transition-base);
+}
+
+#contenedorArchivoActual a:hover {
+    color: var(--primary-700);
+    text-decoration: underline;
+}
+
+/* ============================================
+   SELECTORES DE PRACTICANTES
+   ============================================ */
+#selectPracticanteDoc,
+#practicanteDocumento {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+    padding-right: 2.5rem;
+}
+
+/* ============================================
+   ESTADOS DE CARGA Y FEEDBACK
+   ============================================ */
+.loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ============================================
+   DISEÑO RESPONSIVO
+   ============================================ */
+@media (max-width: 1024px) {
+    .documentos-container {
+        padding: var(--spacing-lg);
+    }
+}
+
+@media (max-width: 768px) {
+    .documentos-container {
+        padding: var(--spacing-md);
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .action-buttons button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .page-header {
+        padding: var(--spacing-lg);
+    }
+    
+    .modal-content,
+    .modal-content-custom {
+        width: 95%;
+        max-height: 85vh;
+    }
+    
+    .modal-body-custom {
+        padding: var(--spacing-lg);
+    }
+    
+    .modal-header-custom {
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+    
+    .modal-header-custom h2 {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .documentos-container {
+        padding: var(--spacing-sm);
+    }
+    
+    .page-header .card-title {
+        font-size: 1.125rem;
+    }
+    
+    .modal-content,
+    .modal-content-custom {
+        border-radius: var(--radius-xl);
+    }
+    
+    .modal-body-custom {
+        padding: var(--spacing-md);
+    }
+    
+    .form-group input[type="file"]::file-selector-button {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* ============================================
+   ANIMACIONES Y EFECTOS
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================
+   MODO IMPRESIÓN
+   ============================================ */
+@media print {
+    .action-buttons,
+    .modal,
+    button {
+        display: none !important;
+    }
+    
+    .page-header {
+        box-shadow: none;
+        border: 1px solid var(--gray-300);
+    }
+}
+
+/* ============================================
+   UTILIDADES ADICIONALES
+   ============================================ */
+.text-muted {
+    color: var(--gray-500);
+}
+
+.text-small {
+    font-size: 0.875rem;
+}
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: var(--spacing-xs); }
+.mb-2 { margin-bottom: var(--spacing-sm); }
+.mb-3 { margin-bottom: var(--spacing-md); }
+.mb-4 { margin-bottom: var(--spacing-lg); }
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: var(--spacing-xs); }
+.mt-2 { margin-top: var(--spacing-sm); }
+.mt-3 { margin-top: var(--spacing-md); }
+.mt-4 { margin-top: var(--spacing-lg); }
+
+.documento-item {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #f9f9f9;
+}
+
+.documento-header {
+    margin-bottom: 10px;
+}
+
+.documento-label {
+    font-weight: bold;
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.documento-label i {
+    color: #7575FA;
+}
+
+.documento-label.obligatorio::after {
+    content: " *";
+    color: #FF664A;
+    font-weight: bold;
+}
+
+.documento-label.opcional::after {
+    content: " (Opcional)";
+    color: #888;
+    font-size: 0.85em;
+    font-weight: normal;
+}
+
+.documento-body {
+    margin-top: 10px;
+}
+
+.preview-documento {
+    margin-top: 10px;
+    padding: 10px;
+    background: white;
+    border-radius: 5px;
+}
+
+.preview-documento .archivo-actual {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    background: #e8f5e9;
+    border-radius: 5px;
+    margin-bottom: 5px;
+}
+
+.preview-documento .btn-group {
+    display: flex;
+    gap: 5px;
+}
+
+.btn-view, .btn-delete {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.btn-view {
+    background: #2196F3;
+    color: white;
+}
+
+.btn-delete {
+    background: #f44336;
+    color: white;
+}
+
+.btn-view:hover {
+    background: #1976D2;
+}
+
+.btn-delete:hover {
+    background: #d32f2f;
+}

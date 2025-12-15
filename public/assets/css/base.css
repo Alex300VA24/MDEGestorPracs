@@ -1,0 +1,40 @@
+/* base.css - core variables and utilities */
+:root {
+    /* Colors */
+    --primary: #3498db;
+    --secondary: #2ecc71;
+    --info: #1abc9c;
+    --warning: #f39c12;
+    --danger: #e74c3c;
+    --gray-900: #212529;
+    --gray-100: #f8f9fa;
+    --white: #ffffff;
+    --black: #000000;
+
+    /* Font */
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+}
+
+/* Utility classes */
+.text-center {
+    text-align: center;
+}
+
+.rounded {
+    border-radius: var(--spacing-sm);
+}
+
+.shadow-sm {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.shadow-md {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}

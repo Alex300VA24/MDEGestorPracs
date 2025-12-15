@@ -1,0 +1,1262 @@
+/* ============================================
+   PRACTICANTES
+   ============================================ */
+:root {
+    /* Paleta de Colores Principal */
+    --primary-50: #f0f4ff;
+    --primary-100: #e0e9ff;
+    --primary-500: #667eea;
+    --primary-600: #5568d3;
+    --primary-700: #4451b8;
+    
+    --success-500: #10b981;
+    --success-600: #059669;
+    --success-700: #047857;
+    
+    --warning-500: #f59e0b;
+    --warning-600: #d97706;
+    
+    --danger-500: #ef4444;
+    --danger-600: #dc2626;
+    
+    --info-500: #06b6d4;
+    --info-600: #0891b2;
+    
+    --secondary-500: #8b5cf6;
+    --secondary-600: #7c3aed;
+    
+    /* Escala de Grises */
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-300: #d1d5db;
+    --gray-400: #9ca3af;
+    --gray-500: #6b7280;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-800: #1f2937;
+    --gray-900: #111827;
+    
+    /* Sombras Profesionales */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    
+    /* Bordes y Radios */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    --radius-2xl: 1.5rem;
+    --radius-full: 9999px;
+    
+    /* Transiciones */
+    --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Espaciado */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 0.75rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    
+    /* Tipografía */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+}
+
+/* ============================================
+   RESET Y BASE
+   ============================================ */
+* {
+    box-sizing: border-box;
+}
+
+/* ============================================
+   CONTENEDOR PRINCIPAL
+   ============================================ */
+.practicantes-container {
+    width: 100%;
+    padding: var(--spacing-xl);
+    max-width: 1440px;
+    margin: 0 auto;
+    font-family: var(--font-sans);
+    color: var(--gray-900);
+    line-height: 1.6;
+}
+
+/* ============================================
+   SISTEMA DE BOTONES
+   ============================================ */
+.action-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Base para todos los botones */
+.btn-primary,
+.btn-success,
+.btn-warning,
+.btn-danger,
+.btn-info {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition-base);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.btn-primary::before,
+.btn-success::before,
+.btn-warning::before,
+.btn-info::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+    opacity: 0;
+    transition: var(--transition-base);
+}
+
+.btn-primary:hover::before,
+.btn-success:hover::before,
+.btn-warning:hover::before,
+.btn-info:hover::before {
+    opacity: 1;
+}
+
+/* Estilos específicos por tipo */
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--secondary-500) 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--secondary-600) 100%);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, var(--success-500) 0%, var(--success-600) 100%);
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+    background: linear-gradient(135deg, var(--success-600) 0%, var(--success-700) 100%);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, var(--warning-500) 0%, var(--warning-600) 100%);
+    color: white;
+}
+
+.btn-warning:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-danger {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger:hover {
+    background: var(--gray-200);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, var(--info-500) 0%, var(--info-600) 100%);
+    color: white;
+}
+
+.btn-info:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Tamaño pequeño */
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+/* Estado activo */
+.btn-primary:active,
+.btn-success:active,
+.btn-warning:active,
+.btn-danger:active,
+.btn-info:active {
+    transform: translateY(0);
+}
+
+/* Estado deshabilitado */
+.btn-primary:disabled,
+.btn-success:disabled,
+.btn-warning:disabled,
+.btn-danger:disabled,
+.btn-info:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ============================================
+   TARJETAS DE CONTENIDO
+   ============================================ */
+.content-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    margin-bottom: var(--spacing-xl);
+    border: 1px solid var(--gray-200);
+    transition: var(--transition-smooth);
+}
+
+.content-card:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.card-title {
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-semibold);
+    color: var(--gray-900);
+    margin: 0 0 var(--spacing-lg) 0;
+    padding-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--gray-200);
+    letter-spacing: -0.01em;
+}
+
+/* ============================================
+   SISTEMA DE FILTROS
+   ============================================ */
+.content-card label {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-weight: var(--font-weight-medium);
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+}
+
+.content-card input[type="text"],
+.content-card select {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 0.9375rem;
+    font-family: var(--font-sans);
+    color: var(--gray-900);
+    background: white;
+    transition: var(--transition-base);
+}
+
+.content-card input[type="text"]:hover,
+.content-card select:hover {
+    border-color: var(--gray-400);
+}
+
+.content-card input[type="text"]:focus,
+.content-card select:focus {
+    border-color: var(--primary-500);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.content-card input[type="text"]::placeholder {
+    color: var(--gray-400);
+}
+
+/* Filtros (vista practicantes) */
+.filters-row {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+.filters-col {
+    flex: 1;
+}
+.filters-apply {
+    margin-top: 20px;
+}
+
+/* ============================================
+   SISTEMA DE TABLAS
+   ============================================ */
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--gray-200);
+}
+
+
+.table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 0;
+    min-width: 900px;
+}
+
+.table th,
+.table td {
+    padding: 0.875rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    word-wrap: break-word;
+    white-space: normal;
+    vertical-align: middle;
+    font-size: 0.875rem;
+}
+
+/* Anchos específicos por columna (tabla practicantes: 8 columnas) */
+#tablaPracticantes th:nth-child(1), #tablaPracticantes td:nth-child(1) { width: 8%; }  /* DNI */
+#tablaPracticantes th:nth-child(2), #tablaPracticantes td:nth-child(2) { width: 25%; } /* Nombre Completo */
+#tablaPracticantes th:nth-child(3), #tablaPracticantes td:nth-child(3) { width: 12%; } /* Carrera */
+#tablaPracticantes th:nth-child(4), #tablaPracticantes td:nth-child(4) { width: 15%; } /* Universidad */
+#tablaPracticantes th:nth-child(5), #tablaPracticantes td:nth-child(5) { width: 12%; } /* Fecha Registro */
+#tablaPracticantes th:nth-child(6), #tablaPracticantes td:nth-child(6) { width: 10%; } /* Área */
+#tablaPracticantes th:nth-child(7), #tablaPracticantes td:nth-child(7) { width: 8%; }  /* Estado (más compacto) */
+#tablaPracticantes th:nth-child(8), #tablaPracticantes td:nth-child(8) { width: 10%; } /* Acciones */
+
+.table th {
+    background: var(--gray-50);
+    font-weight: var(--font-weight-semibold);
+    color: var(--gray-700);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+}
+
+.table tbody tr {
+    transition: var(--transition-base);
+}
+
+.table tbody tr:hover {
+    background: var(--gray-50);
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ============================================
+   BADGES DE ESTADO
+   ============================================ */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius-full);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: var(--font-weight-semibold);
+    text-align: center;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+    box-shadow: var(--shadow-xs);
+}
+
+.status-pendiente { 
+    background: linear-gradient(135deg, var(--warning-500) 0%, var(--warning-600) 100%);
+}
+
+.status-vigente { 
+    background: linear-gradient(135deg, var(--info-500) 0%, var(--info-600) 100%);
+}
+
+.status-finalizado { 
+    background: linear-gradient(135deg, var(--success-500) 0%, var(--success-600) 100%);
+}
+
+.status-rechazado { 
+    background: linear-gradient(135deg, var(--danger-500) 0%, var(--danger-600) 100%);
+}
+
+.status-activo { 
+    background: linear-gradient(135deg, var(--secondary-500) 0%, var(--secondary-600) 100%);
+}
+
+/* ============================================
+   MODAL VER PRACTICANTE
+   ============================================ */
+.modal-ver-practicante {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    padding: 20px;
+    backdrop-filter: blur(2px);
+}
+
+.modal-ver-container {
+    background: white;
+    border-radius: 14px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 15px 45px rgba(0,0,0,0.25);
+    animation: fadeIn 0.25s ease-out;
+}
+
+.modal-ver-header {
+    background: linear-gradient(135deg, #2563eb, #1e3a8a);
+    padding: 20px;
+    border-radius: 14px 14px 0 0;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-ver-close {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.modal-ver-body {
+    padding: 30px;
+}
+
+.modal-ver-nombre {
+    text-align: center;
+    color: #1e293b;
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #2563eb;
+}
+
+.modal-ver-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 20px;
+}
+
+.modal-ver-grid p {
+    margin: 0;
+    color: #334155;
+}
+
+.modal-ver-grid .col-span {
+    grid-column: 1 / -1;
+}
+
+.modal-ver-grid .estado {
+    text-align: center;
+}
+
+.modal-ver-grid .badge {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    margin-left: 6px;
+    display: inline-block;
+}
+.modal-ver-grid .badge.activo {
+    background: #dcfce7;
+    color: #166534;
+}
+.modal-ver-grid .badge.inactivo {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.modal-ver-footer {
+    text-align: center;
+    margin: 0 0 20px 0;
+    padding: 0 30px 30px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* ============================================
+   SISTEMA DE MODALES
+   ============================================ */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-md);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: white;
+    width: 100%;
+    max-width: 600px;
+    border-radius: var(--radius-2xl);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-2xl);
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid var(--gray-200);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-content h3 {
+    text-align: center;
+    color: var(--gray-900);
+    margin: 0 0 var(--spacing-xl) 0;
+    font-size: 1.5rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: -0.02em;
+}
+
+/* Scrollbar personalizado para modales */
+.modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: var(--radius-full);
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: var(--radius-full);
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+/* ============================================
+   FORMULARIOS
+   ============================================ */
+#formPracticante,
+#formAceptarPracticante {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md) var(--spacing-lg);
+}
+
+#formPracticante input,
+#formPracticante select,
+#formAceptarPracticante input:not([type="checkbox"]),
+#formAceptarPracticante select,
+#formAceptarPracticante textarea {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius-md);
+    font-size: 0.9375rem;
+    font-family: var(--font-sans);
+    color: var(--gray-900);
+    background: white;
+    transition: var(--transition-base);
+}
+
+#formPracticante input::placeholder,
+#formPracticante select::placeholder,
+#formAceptarPracticante input::placeholder,
+#formAceptarPracticante textarea::placeholder {
+    color: var(--gray-400);
+}
+
+#formPracticante input:hover,
+#formPracticante select:hover,
+#formAceptarPracticante input:hover,
+#formAceptarPracticante select:hover,
+#formAceptarPracticante textarea:hover {
+    border-color: var(--gray-400);
+}
+
+#formPracticante input:focus,
+#formPracticante select:focus,
+#formAceptarPracticante input:focus,
+#formAceptarPracticante select:focus,
+#formAceptarPracticante textarea:focus {
+    border-color: var(--primary-500);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Botones de formulario */
+#formPracticante button[type="submit"],
+#formAceptarPracticante button[type="submit"] {
+    grid-column: 1 / 2;
+    background: linear-gradient(135deg, var(--primary-500) 0%, var(--primary-600) 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-base);
+    font-weight: var(--font-weight-medium);
+    font-size: 0.9375rem;
+    box-shadow: var(--shadow-sm);
+}
+
+#formPracticante button[type="submit"]:hover,
+#formAceptarPracticante button[type="submit"]:hover {
+    background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+#formPracticante button[type="button"],
+#formAceptarPracticante button[type="button"] {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-300);
+    color: var(--gray-700);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition-base);
+    font-weight: var(--font-weight-medium);
+    font-size: 0.9375rem;
+}
+
+#formPracticante button[type="button"]:hover,
+#formAceptarPracticante button[type="button"]:hover {
+    background: var(--gray-200);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* ============================================
+   GRUPOS DE FORMULARIO
+   ============================================ */
+.form-group {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.form-group label {
+    font-weight: var(--font-weight-medium);
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    letter-spacing: 0.01em;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: var(--font-sans);
+    line-height: 1.5;
+}
+
+/* ============================================
+   INFORMACIÓN DEL PRACTICANTE - DISEÑO PROFESIONAL
+   ============================================ */
+
+/* Modal Container */
+#modalAceptarPracticante .modal-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #ffffff;
+    max-width: 800px;
+}
+
+#modalAceptarPracticante form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Contenedor Principal de Información */
+#infoPracticante {
+    width: 90%;
+    max-width: 700px;
+    margin: 25px auto;
+    padding: 0;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#infoPracticante:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+    border-color: #3b82f6;
+}
+
+/* Header del Card */
+#infoPracticante h4 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+    padding: 20px 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    text-align: left;
+    border-bottom: 3px solid #5a67d8;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    letter-spacing: 0.3px;
+}
+
+#infoPracticante h4::before {
+    font-size: 1.5rem;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+/* Contenedor de Información */
+.info-content {
+    padding: 28px 32px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* Filas de Información */
+#infoPracticante p {
+    margin: 0;
+    padding: 16px 20px;
+    font-size: 0.98rem;
+    line-height: 1.6;
+    background: #ffffff;
+    border-left: 4px solid transparent;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+#infoPracticante p:hover {
+    border-left-color: #667eea;
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+    background: #fafbff;
+}
+
+#infoPracticante p:last-child {
+    margin-bottom: 0;
+}
+
+/* Labels (strong) */
+#infoPracticante strong {
+    color: #475569;
+    font-weight: 700;
+    min-width: 140px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.92rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Iconos antes de los labels */
+#infoPracticante strong::before {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    color: #667eea;
+    font-size: 1.1rem;
+    width: 24px;
+    text-align: center;
+}
+
+#infoPracticante p:nth-child(1) strong::before {
+    content: "\f007"; /* fa-user */
+}
+
+#infoPracticante p:nth-child(2) strong::before {
+    content: "\f2c2"; /* fa-id-card */
+}
+
+#infoPracticante p:nth-child(3) strong::before {
+    content: "\f19d"; /* fa-graduation-cap */
+}
+
+#infoPracticante p:nth-child(4) strong::before {
+    content: "\f19c"; /* fa-university */
+}
+
+#infoPracticante p:nth-child(5) strong::before {
+    content: "\f0e0"; /* fa-envelope */
+}
+
+#infoPracticante p:nth-child(6) strong::before {
+    content: "\f095"; /* fa-phone */
+}
+
+#infoPracticante p:nth-child(7) strong::before {
+    content: "\f3c5"; /* fa-map-marker-alt */
+}
+
+/* Valores */
+#infoPracticante p span {
+    color: #1e293b;
+    font-weight: 500;
+    flex: 1;
+    padding-left: 16px;
+    border-left: 2px solid #e2e8f0;
+    margin-left: 12px;
+}
+
+/* Variante: Si usas el formato <p><strong>Label:</strong> Valor</p> */
+#infoPracticante p:not(:has(span)) {
+    display: block;
+}
+
+#infoPracticante p:not(:has(span)) strong {
+    display: inline;
+}
+
+/* Badge de Estado (opcional) */
+.practicante-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-left: 12px;
+}
+
+.practicante-badge.activo {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.practicante-badge.pendiente {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+/* Form Groups */
+#modalAceptarPracticante .form-group {
+    width: 90%;
+    max-width: 700px;
+    margin-bottom: 24px;
+}
+
+#modalAceptarPracticante .form-group label {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+}
+
+#modalAceptarPracticante .form-group label i {
+    color: #667eea;
+}
+
+/* Inputs y Selects */
+#modalAceptarPracticante input,
+#modalAceptarPracticante select,
+#modalAceptarPracticante textarea {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: #ffffff;
+}
+
+#modalAceptarPracticante input:focus,
+#modalAceptarPracticante select:focus,
+#modalAceptarPracticante textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    background: #fafbff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #infoPracticante {
+        width: 95%;
+        margin: 15px auto;
+    }
+    
+    .info-content {
+        padding: 20px 16px;
+    }
+    
+    #infoPracticante h4 {
+        font-size: 1.15rem;
+        padding: 16px 20px;
+    }
+    
+    #infoPracticante p {
+        padding: 14px 16px;
+        font-size: 0.92rem;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    #infoPracticante strong {
+        min-width: auto;
+        margin-bottom: 6px;
+    }
+    
+    #infoPracticante p span {
+        padding-left: 0;
+        border-left: none;
+        margin-left: 0;
+        margin-top: 6px;
+        padding-top: 8px;
+        border-top: 1px solid #e2e8f0;
+        width: 100%;
+    }
+}
+
+/* Animación de entrada */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#infoPracticante {
+    animation: slideInUp 0.5s ease-out;
+}
+
+/* Efecto de brillo sutil */
+#infoPracticante::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.7s;
+}
+
+#infoPracticante:hover::after {
+    left: 100%;
+}
+
+
+/* Responsive */
+@media (max-width: 768px) {
+    .dias-checkboxes {
+        gap: 8px;
+    }
+    
+    .dias-checkboxes label {
+        padding: 10px 16px;
+        font-size: 0.88rem;
+        min-width: 95px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dias-checkboxes {
+        flex-direction: column;
+    }
+    
+    .dias-checkboxes label {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+/* Animación de entrada */
+.dias-checkboxes label {
+    animation: fadeInScale 0.4s ease-out backwards;
+}
+
+.dias-checkboxes label:nth-child(1) { animation-delay: 0.05s; }
+.dias-checkboxes label:nth-child(2) { animation-delay: 0.1s; }
+.dias-checkboxes label:nth-child(3) { animation-delay: 0.15s; }
+.dias-checkboxes label:nth-child(4) { animation-delay: 0.2s; }
+.dias-checkboxes label:nth-child(5) { animation-delay: 0.25s; }
+.dias-checkboxes label:nth-child(6) { animation-delay: 0.3s; }
+.dias-checkboxes label:nth-child(7) { animation-delay: 0.35s; }
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Contador de seleccionados (opcional) */
+.dias-checkboxes-container {
+    position: relative;
+}
+
+.dias-checkboxes-counter {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    z-index: 10;
+}
+
+/* ============================================
+   LISTA DE MENSAJES
+   ============================================ */
+#listaMensajes {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    margin: var(--spacing-md) 0;
+}
+
+#listaMensajes::-webkit-scrollbar {
+    width: 8px;
+}
+
+#listaMensajes::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: var(--radius-full);
+}
+
+#listaMensajes::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: var(--radius-full);
+}
+
+#listaMensajes::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+/* ============================================
+   CAMPOS CONDICIONALES
+   ============================================ */
+#camposAceptacion {
+    grid-column: 1 / -1;
+}
+
+#camposAceptacion input[type="date"] {
+    width: 100%;
+}
+
+/* ============================================
+   UTILIDADES
+   ============================================ */
+.text-center {
+    text-align: center;
+}
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: var(--spacing-xs); }
+.mb-2 { margin-bottom: var(--spacing-sm); }
+.mb-3 { margin-bottom: var(--spacing-md); }
+.mb-4 { margin-bottom: var(--spacing-lg); }
+
+/* ============================================
+   DISEÑO RESPONSIVO
+   ============================================ */
+@media (max-width: 1024px) {
+    .practicantes-container {
+        padding: var(--spacing-lg);
+    }
+}
+
+@media (max-width: 768px) {
+    .practicantes-container {
+        padding: var(--spacing-md);
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+    
+    .action-buttons button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .content-card {
+        padding: var(--spacing-lg);
+    }
+    
+    .content-card > div[style*="display: flex"] {
+        flex-direction: column !important;
+    }
+    
+    #formPracticante,
+    #formAceptarPracticante {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .modal-content {
+        width: 95%;
+        padding: var(--spacing-lg);
+        max-height: 85vh;
+    }
+    
+    .table th,
+    .table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.8125rem;
+    }
+    
+    .dias-checkboxes {
+        gap: 0.375rem;
+    }
+    
+    .dias-checkboxes label {
+        padding: 0.375rem 0.625rem;
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .practicantes-container {
+        padding: var(--spacing-sm);
+    }
+    
+    .btn-primary,
+    .btn-success,
+    .btn-warning,
+    .btn-danger,
+    .btn-info {
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .card-title {
+        font-size: 1rem;
+    }
+    
+    .modal-content {
+        padding: var(--spacing-md);
+    }
+    
+    .modal-content h3 {
+        font-size: 1.25rem;
+    }
+}
+
+/* ============================================
+   ANIMACIONES Y EFECTOS
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================
+   MODO IMPRESIÓN
+   ============================================ */
+@media print {
+    .action-buttons,
+    .modal,
+    button {
+        display: none !important;
+    }
+    
+    .content-card {
+        box-shadow: none;
+        border: 1px solid var(--gray-300);
+    }
+}
+
+.mensajes-lista { max-height: 450px; overflow-y: auto; }
+.section-subtitle { margin: 0 0 15px 0; color: var(--primary-500); }
+    
+.table {
+    page-break-inside: auto;
+}
+
+.table tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+}
+
+.swal2-container {
+    z-index: 99999 !important;
+}

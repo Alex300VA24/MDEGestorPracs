@@ -1,0 +1,37 @@
+/* components/tables.css */
+/* Responsive table styles */
+.table-responsive {
+    border-radius: var(--spacing-sm);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.table {
+    margin-bottom: 0;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table thead th {
+    background: #34495e;
+    color: var(--white);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    padding: var(--spacing-md) var(--spacing-sm);
+    border: none;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: #f1f3f5;
+}
+
+.table tbody td {
+    padding: var(--spacing-sm) var(--spacing-sm);
+    vertical-align: middle;
+}
