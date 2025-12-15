@@ -619,13 +619,14 @@ window.initDocumentos = function() {
 
     // Función mejorada para generar carta de aceptación
     async function generarCartaAceptacion(solicitudID) {
-        
         const inputExpediente = document.getElementById('numeroExpedienteCarta');
+        const inputDirector = document.getElementById('nombreDirectorCarta');
+        const inputCargo = document.getElementById('cargoDirectorCarta');
         const selectFormato = document.getElementById('formatoDocumentoCarta');
         const btnGenerar = document.getElementById('btnGenerarCarta');
         const mensajeEstado = document.getElementById('mensajeEstadoCarta');
 
-        // Enfocar el input
+        // Enfocar el primer input
         inputExpediente.focus();
 
         // Función para mostrar mensajes
@@ -648,22 +649,35 @@ window.initDocumentos = function() {
             }
         };
 
-
         const numeroExpediente = inputExpediente.value.trim();
+        const nombreDirector = inputDirector.value.trim().toUpperCase();
+        const cargoDirector = inputCargo.value.trim().toUpperCase();
         const formato = selectFormato.value;
 
-        // Validación
+        // Validaciones
         if (!numeroExpediente) {
             mostrarMensaje('Por favor, ingrese el número de expediente', 'error');
             inputExpediente.focus();
             return;
         }
 
-        // Validar formato del expediente (opcional)
-        const regexExpediente = /^\d{6}-\d{4}-\d{1,2}$/;
+        // Validar formato del expediente
+        const regexExpediente = /^\d{5}-\d{4}-\d{1,2}$/;
         if (!regexExpediente.test(numeroExpediente)) {
             mostrarMensaje('Formato de expediente inválido. Use: XXXXX-YYYY-X', 'error');
             inputExpediente.focus();
+            return;
+        }
+
+        if (!nombreDirector) {
+            mostrarMensaje('Por favor, ingrese el nombre del director', 'error');
+            inputDirector.focus();
+            return;
+        }
+
+        if (!cargoDirector) {
+            mostrarMensaje('Por favor, ingrese el cargo del director', 'error');
+            inputCargo.focus();
             return;
         }
 
@@ -674,13 +688,21 @@ window.initDocumentos = function() {
             btnGenerar.style.background = '#999';
             mostrarMensaje('Generando carta de aceptación...', 'info');
 
-            console.log(solicitudID, numeroExpediente, formato);
+            console.log({
+                solicitudID,
+                numeroExpediente,
+                nombreDirector,
+                cargoDirector,
+                formato
+            });
 
-            // Llamar a la API
+            // Llamar a la API con los nuevos parámetros
             const resultado = await api.generarCartaAceptacion(
                 solicitudID,
                 numeroExpediente,
-                formato
+                formato,
+                nombreDirector,
+                cargoDirector
             );
 
             if (resultado.success) {
@@ -728,14 +750,18 @@ window.initDocumentos = function() {
             btnGenerar.style.background = '#4CAF50';
         }
         
-
         // Permitir generar con Enter
-        inputExpediente.addEventListener('keypress', (e) => {
+        const handleEnter = (e) => {
             if (e.key === 'Enter') {
                 btnGenerar.click();
             }
-        });
+        };
+        
+        inputExpediente.addEventListener('keypress', handleEnter);
+        inputDirector.addEventListener('keypress', handleEnter);
+        inputCargo.addEventListener('keypress', handleEnter);
     }
+
     function mostrarAlerta({
         tipo = "info",
         titulo = "",

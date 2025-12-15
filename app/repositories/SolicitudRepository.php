@@ -263,7 +263,7 @@ class SolicitudRepository {
     /**
      * Generar carta de aceptación en formato Word
      */
-    public function generarCartaWord($datos, $numeroExpediente) {
+    public function generarCartaWord($datos, $numeroExpediente, $nombreDirector, $cargoDirector) {
         $phpWord = new PhpWord();
         
         // Configuración de la sección
@@ -302,9 +302,9 @@ class SolicitudRepository {
             ['alignment' => 'right', 'spaceAfter' => 240]
         );
 
-        // Destinatario
-        $section->addText('VILCA GAVIDIA LUIS AGUSTIN', $boldStyle, ['spaceAfter' => 0]);
-        $section->addText('DIRECTOR', $boldStyle, ['spaceAfter' => 240]);
+        // Destinatario (ahora dinámico)
+        $section->addText(strtoupper($nombreDirector), $boldStyle, ['spaceAfter' => 0]);
+        $section->addText(strtoupper($cargoDirector), $boldStyle, ['spaceAfter' => 240]);
 
         // Cuerpo del documento
         $nombreCompleto = $datos['Nombres'] . ' ' . $datos['ApellidoPaterno'] . ' ' . $datos['ApellidoMaterno'];
@@ -375,7 +375,7 @@ class SolicitudRepository {
     /**
      * Generar carta de aceptación en formato PDF
      */
-    public function generarCartaPDF($datos, $numeroExpediente) {
+    public function generarCartaPDF($datos, $numeroExpediente, $nombreDirector, $cargoDirector) {
         error_log('Si se llamo a la funcion generar carta pdf');
         $nombreCompleto = $datos['Nombres'] . ' ' . $datos['ApellidoPaterno'] . ' ' . $datos['ApellidoMaterno'];
         error_log("Si hay nombre completo: " . $nombreCompleto);
@@ -388,12 +388,12 @@ class SolicitudRepository {
 
         error_log("Datos obtenidos: " . print_r($datos, true));
         error_log("Este es el numero de expediente: " . $numeroExpediente);
+        error_log("Nombre del director: " . $nombreDirector);
+        error_log("Cargo del director: " . $cargoDirector);
 
         $genero = $datos['Genero'] === 'M' ? "el Sr." : "la Srta.";
         $identificado = $datos['Genero'] === 'M' ? "identificado" : "identificada";
         $admitido = $datos['Genero'] === 'M' ? "admitido" : "admitida";
-        
-
 
         // HTML para el PDF
         $html = '
@@ -460,8 +460,8 @@ class SolicitudRepository {
             </div>
             
             <div class="destinatario">
-                VILCA GAVIDIA LUIS AGUSTIN<br>
-                DIRECTOR
+                ' . strtoupper($nombreDirector) . '<br>
+                ' . strtoupper($cargoDirector) . '
             </div>
             
             <div class="contenido">
@@ -495,7 +495,6 @@ class SolicitudRepository {
 
         // Configurar Dompdf
         try {
-
             error_log('Antes de instanciar options');
             $options = new Options();
             error_log("Se instancion bien options: " . print_r($options, true));
@@ -504,7 +503,7 @@ class SolicitudRepository {
             $options->set('defaultFont', 'Arial');
 
             $dompdf = new Dompdf($options);
-            error_log("Se instancion bien options: " . print_r($dompdf, true));
+            error_log("Se instancion bien dompdf: " . print_r($dompdf, true));
             $dompdf->loadHtml($html);
             $dompdf->setPaper('A4', 'portrait');
             $dompdf->render();
@@ -512,12 +511,9 @@ class SolicitudRepository {
             error_log('Se configuró el dompdf correctamente');
 
         } catch (\Exception $e) {
-
             error_log("ERROR DOMPDF: " . $e->getMessage());
             error_log("TRACE: " . $e->getTraceAsString());
-
         }
-
 
         // Crear directorio si no existe
         $directorioCartas = __DIR__ . '/../../public/cartas/';

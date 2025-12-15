@@ -261,11 +261,13 @@ class API {
         });
     }
 
-    async generarCartaAceptacion(solicitudID, numeroExpediente, formato) {
+    async generarCartaAceptacion(solicitudID, numeroExpediente, formato, $nombreDirector, $cargoDirector) {
         return this.post('/solicitudes/generarCartaAceptacion', {
             solicitudID,
             numeroExpediente,
-            formato
+            formato,
+            nombreDirector: $nombreDirector,
+            cargoDirector: $cargoDirector
         });
     }
 

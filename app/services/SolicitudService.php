@@ -66,7 +66,7 @@ class SolicitudService {
     /**
      * Generar carta de aceptación con validaciones completas
      */
-    public function generarCartaAceptacion($solicitudID, $numeroExpediente, $formato) {
+    public function generarCartaAceptacion($solicitudID, $numeroExpediente, $formato, $nombreDirector, $cargoDirector) {
         error_log("=== SERVICE generarCartaAceptacion ===");
         error_log("SolicitudID: $solicitudID, Expediente: $numeroExpediente, Formato: $formato");
         
@@ -154,9 +154,9 @@ class SolicitudService {
                 error_log("Generando archivo en formato: $formato");
                 
                 if ($formato === 'word') {
-                    $archivo = $this->repo->generarCartaWord($datosCarta, $numeroExpediente);
+                    $archivo = $this->repo->generarCartaWord($datosCarta, $numeroExpediente, $nombreDirector, $cargoDirector);
                 } else if ($formato === 'pdf') {
-                    $archivo = $this->repo->generarCartaPDF($datosCarta, $numeroExpediente);
+                    $archivo = $this->repo->generarCartaPDF($datosCarta, $numeroExpediente, $nombreDirector, $cargoDirector);
                 } else {
                     error_log("Error: Formato no reconocido: $formato");
                     return [

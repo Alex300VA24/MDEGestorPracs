@@ -16,9 +16,10 @@ window.initPracticantes = function() {
         const filtroAreaDiv = document.getElementById('filtroArea').closest('div');
         const btnNuevoPracticante = document.getElementById('btnNuevoPracticante');
 
-        // Si el usuario NO es de RRHH, ocultamos el filtro de área (pero no el botón de crear)
+        // Si el usuario NO es de RRHH, ocultamos el filtro de área y el boton de crear
         if (nombreAreaUsuario !== 'Gerencia de Recursos Humanos') {
             filtroAreaDiv.style.display = 'none';
+            btnNuevoPracticante.style.display = 'none';
         }
         await inicializarModulo();
         configurarEventListeners();
@@ -346,6 +347,7 @@ window.initPracticantes = function() {
             const areaIDUsuario = parseInt(sessionStorage.getItem('areaID')) || null;
             const esRRHH = nombreAreaUsuario === 'Gerencia de Recursos Humanos';
 
+            console.log({nombreAreaUsuario, areaIDUsuario, esRRHH});
             // Filtrar practicantes según el área si NO es RRHH
             const practicantesFiltrados = esRRHH
                 ? practicantes
@@ -376,12 +378,7 @@ window.initPracticantes = function() {
                 const estadoBadge = `<span class="status-badge status-${estadoClass}">${estadoDescripcion.toUpperCase()}</span>`;
 
                 // Mostrar botón de aceptar solo si pertenece al área del usuario y es “Pendiente”
-                let mostrarBotonAceptar;
-                if (esRRHH) {
-                    mostrarBotonAceptar = estadoDescripcion === 'Pendiente';
-                } else {
-                    mostrarBotonAceptar = areaNombre === nombreAreaUsuario && estadoDescripcion === 'Pendiente';
-                }
+                const mostrarBotonAceptar = !esRRHH && areaNombre === nombreAreaUsuario && estadoDescripcion === 'Pendiente';
                 // Construir fila
                 fila.innerHTML = `
                     <td>${p.DNI}</td>
@@ -999,7 +996,6 @@ window.initPracticantes = function() {
     // ===================================== EVENT LISTENERS ====================================
 
     function configurarEventListeners() {
-        console.log('Configurando event listeners');
         
         // Botón nuevo practicante
         const btnNuevo = document.getElementById("btnNuevoPracticante");

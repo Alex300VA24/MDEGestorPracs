@@ -421,9 +421,22 @@ class SolicitudController {
                 return;
             }
 
+            if (!isset($data['nombreDirector']) || !isset($data['cargoDirector'])) {
+                error_log("Faltan datos del director");
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Faltan parámetros: nombreDirector o cargoDirector'
+                ]);
+                return;
+            }
+
+
             $solicitudID = $data['solicitudID'];
             $numeroExpediente = $data['numeroExpediente'];
             $formato = strtolower($data['formato']);
+            $nombreDirector = $data['nombreDirector'];
+            $cargoDirector = $data['cargoDirector'];
             
             error_log("Parámetros validados - SolicitudID: $solicitudID, Expediente: $numeroExpediente, Formato: $formato");
 
@@ -438,7 +451,7 @@ class SolicitudController {
             }
 
             error_log("Llamando al service...");
-            $resultado = $this->service->generarCartaAceptacion($solicitudID, $numeroExpediente, $formato);
+            $resultado = $this->service->generarCartaAceptacion($solicitudID, $numeroExpediente, $formato, $nombreDirector, $cargoDirector);
             error_log("Resultado del service: " . print_r($resultado, true));
             
             if ($resultado['success']) {

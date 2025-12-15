@@ -157,7 +157,30 @@
         </div>
 
         <div class="form-group">
-            <label for="formatoDocumento">Formato del documento:</label>
+            <label for="nombreDirectorCarta">Nombre del Director:</label>
+            <input 
+                type="text" 
+                id="nombreDirectorCarta" 
+                placeholder="Ej: VILCA GAVIDIA LUIS AGUSTIN"
+                style="text-transform: uppercase;"
+            />
+            <small>Nombre completo del Director de Escuela/Facultad</small>
+        </div>
+
+        <div class="form-group">
+            <label for="cargoDirectorCarta">Cargo del Director:</label>
+            <input 
+                type="text" 
+                id="cargoDirectorCarta" 
+                placeholder="Ej: DIRECTOR DE ESCUELA"
+                value="DIRECTOR"
+                style="text-transform: uppercase;"
+            />
+            <small>Cargo o título del destinatario</small>
+        </div>
+
+        <div class="form-group">
+            <label for="formatoDocumentoCarta">Formato del documento:</label>
             <select id="formatoDocumentoCarta">
                 <option value="word">Word (.docx)</option>
                 <option value="pdf">PDF (.pdf)</option>
