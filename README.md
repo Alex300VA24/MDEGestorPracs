@@ -98,6 +98,3 @@ docs/                   # Documentación del proyecto
 5. Crea un Pull Request en GitHub.
 
 ---
-
-## Licencia
-Este proyecto está bajo la licencia MIT.
