@@ -1,9 +1,11 @@
 <?php
+
 namespace App\Services;
 
 use App\Repositories\AsistenciaRepository;
 
-class AsistenciaService {
+class AsistenciaService
+{
     private $repository;
 
     // Configuración de turnos
@@ -20,7 +22,8 @@ class AsistenciaService {
         ]
     ];
 
-    public function __construct() {
+    public function __construct()
+    {
         date_default_timezone_set('America/Lima');
         $this->repository = new AsistenciaRepository();
     }
@@ -28,7 +31,8 @@ class AsistenciaService {
     /**
      * Registrar entrada con validación de horarios
      */
-    public function registrarEntrada($practicanteID, $turnoID, $horaEntrada = null) {
+    public function registrarEntrada($practicanteID, $turnoID, $horaEntrada = null)
+    {
         try {
             if (empty($practicanteID) || empty($turnoID)) {
                 throw new \Exception("Datos incompletos en service");
@@ -36,6 +40,12 @@ class AsistenciaService {
 
             $fecha = date('Y-m-d');
             $hora = $horaEntrada ?? date('H:i:s');
+
+            // Validar que la fecha de entrada del practicante no sea posterior a hoy
+            $fechaEntradaPracticante = $this->repository->obtenerFechaEntradaPracticante($practicanteID);
+            if ($fechaEntradaPracticante && $fechaEntradaPracticante > $fecha) {
+                throw new \Exception("No se puede registrar asistencia. La fecha de inicio de prácticas ({$fechaEntradaPracticante}) es posterior a la fecha actual.");
+            }
 
             // Validar que el turno existe
             if (!isset(self::TURNOS[$turnoID])) {
@@ -61,7 +71,6 @@ class AsistenciaService {
                     "turno" => self::TURNOS[$turnoID]['nombre']
                 ]
             ];
-
         } catch (\Throwable $e) {
             error_log("Service registrarEntrada: " . $e->getMessage());
             throw $e;
@@ -71,7 +80,8 @@ class AsistenciaService {
     /**
      * Registrar salida con validación de horarios
      */
-    public function registrarSalida($practicanteID, $horaSalida = null) {
+    public function registrarSalida($practicanteID, $horaSalida = null)
+    {
         try {
             if (empty($practicanteID)) {
                 throw new \Exception("Datos incompletos salida service");
@@ -79,6 +89,12 @@ class AsistenciaService {
 
             $fecha = date('Y-m-d');
             $hora = $horaSalida ?? date('H:i:s');
+
+            // Validar que la fecha de entrada del practicante no sea posterior a hoy
+            $fechaEntradaPracticante = $this->repository->obtenerFechaEntradaPracticante($practicanteID);
+            if ($fechaEntradaPracticante && $fechaEntradaPracticante > $fecha) {
+                throw new \Exception("No se puede registrar asistencia. La fecha de inicio de prácticas ({$fechaEntradaPracticante}) es posterior a la fecha actual.");
+            }
 
             // Obtener asistencia activa (sin salida)
             $asistenciaActiva = $this->repository->obtenerAsistenciaActiva($practicanteID, $fecha);
@@ -103,7 +119,6 @@ class AsistenciaService {
                     "turno" => self::TURNOS[$turnoID]['nombre']
                 ]
             ];
-
         } catch (\Throwable $e) {
             error_log("Service registrarSalida: " . $e->getMessage());
             throw $e;
@@ -113,7 +128,8 @@ class AsistenciaService {
     /**
      * Iniciar pausa
      */
-    public function iniciarPausa($asistenciaID, $motivo = null) {
+    public function iniciarPausa($asistenciaID, $motivo = null)
+    {
         try {
             if (empty($asistenciaID)) {
                 throw new \Exception("Se requiere asistenciaID");
@@ -133,7 +149,6 @@ class AsistenciaService {
                 "message" => $resultado['message'],
                 "data" => $resultado['data'] ?? []
             ];
-
         } catch (\Throwable $e) {
             error_log("Service iniciarPausa: " . $e->getMessage());
             throw $e;
@@ -143,7 +158,8 @@ class AsistenciaService {
     /**
      * Finalizar pausa
      */
-    public function finalizarPausa($pausaID) {
+    public function finalizarPausa($pausaID)
+    {
         try {
             if (empty($pausaID)) {
                 throw new \Exception("Se requiere pausaID");
@@ -158,7 +174,6 @@ class AsistenciaService {
                 "message" => $resultado['message'],
                 "data" => $resultado['data'] ?? []
             ];
-
         } catch (\Throwable $e) {
             error_log("Service finalizarPausa: " . $e->getMessage());
             throw $e;
@@ -168,7 +183,8 @@ class AsistenciaService {
     /**
      * Listar asistencias por área
      */
-    public function listarAsistencias($areaID, $fecha = null) {
+    public function listarAsistencias($areaID, $fecha = null)
+    {
         try {
             if (!$areaID) {
                 throw new \Exception("El área del usuario no está definida.");
@@ -176,7 +192,6 @@ class AsistenciaService {
 
             $asistencias = $this->repository->obtenerAsistenciasPorArea($areaID, $fecha);
             return $asistencias;
-
         } catch (\Throwable $e) {
             error_log("❌ Error en Service listarAsistencias: " . $e->getMessage());
             throw $e;
@@ -186,37 +201,40 @@ class AsistenciaService {
     /**
      * Ajustar hora de entrada según límites del turno
      */
-    private function ajustarHoraEntrada($hora, $turnoID) {
+    private function ajustarHoraEntrada($hora, $turnoID)
+    {
         $turno = self::TURNOS[$turnoID];
-        
+
         // Si es antes del inicio del turno, ajustar al inicio
         if ($hora < $turno['horaInicio']) {
             error_log("Ajustando entrada de $hora a {$turno['horaInicio']}");
             return $turno['horaInicio'];
         }
-        
+
         return $hora;
     }
 
     /**
      * Ajustar hora de salida según límites del turno
      */
-    private function ajustarHoraSalida($hora, $turnoID) {
+    private function ajustarHoraSalida($hora, $turnoID)
+    {
         $turno = self::TURNOS[$turnoID];
-        
+
         // Si es después del fin del turno, ajustar al fin
         if ($hora > $turno['horaFin']) {
             error_log("Ajustando salida de $hora a {$turno['horaFin']}");
             return $turno['horaFin'];
         }
-        
+
         return $hora;
     }
 
     /**
      * Obtener asistencia completa de un practicante para hoy
      */
-    public function obtenerAsistenciaCompleta($practicanteID) {
+    public function obtenerAsistenciaCompleta($practicanteID)
+    {
         try {
             if (empty($practicanteID)) {
                 throw new \Exception("Se requiere practicanteID");
@@ -224,12 +242,11 @@ class AsistenciaService {
 
             $fecha = date('Y-m-d');
             $asistencia = $this->repository->obtenerAsistenciaCompleta($practicanteID, $fecha);
-            
+
             return [
                 'success' => true,
                 'data' => $asistencia
             ];
-
         } catch (\Throwable $e) {
             error_log("Service obtenerAsistenciaCompleta: " . $e->getMessage());
             throw $e;

@@ -11,7 +11,7 @@ class SolicitudController {
     }
 
 
-    public function obtenerDocumentosPorPracticante() {
+    /*public function obtenerDocumentosPorPracticante() {
         if (!isset($_GET['practicanteID'])) {
             echo json_encode([]);
             return;
@@ -40,6 +40,36 @@ class SolicitudController {
         }
 
         echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
+    }*/
+    
+    public function obtenerDocumentosPorPracticante() {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        try {
+            $practicanteID = $_GET['practicanteID'] ?? null;
+
+            if (!$practicanteID || !is_numeric($practicanteID)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'PracticanteID es requerido y debe ser numérico'
+                ], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+
+            $resultado = $this->service->obtenerDocumentosSolicitudActiva($practicanteID);
+
+            http_response_code(200);
+            echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
+
+        } catch (\Exception $e) {
+            error_log('Error en obtenerDocumentosPorPracticante: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error al obtener documentos: ' . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
     }
 
     public function obtenerDocumentoPorTipoYPracticante()
@@ -77,6 +107,44 @@ class SolicitudController {
             }
         } catch (\Throwable $e) {
             // 🔹 Capturar cualquier error del servidor
+            echo json_encode([
+                "success" => false,
+                "message" => "Error en el servidor: " . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    public function obtenerDocumentoPorTipoYSolicitud()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        try {
+            $solicitudID = $_GET['solicitudID'] ?? null;
+            $tipoDocumento = $_GET['tipoDocumento'] ?? null;
+
+            if (!$solicitudID || !$tipoDocumento) {
+                echo json_encode([
+                    "success" => false,
+                    "message" => "Faltan parámetros: solicitudID o tipoDocumento."
+                ], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+
+            // Llamar al servicio
+            $documento = $this->service->obtenerDocumentoPorTipoYSolicitud($solicitudID, $tipoDocumento);
+
+            if ($documento && is_array($documento)) {
+                echo json_encode([
+                    "success" => true,
+                    "data" => $documento
+                ], JSON_UNESCAPED_UNICODE);
+            } else {
+                echo json_encode([
+                    "success" => true,
+                    "data" => null
+                ], JSON_UNESCAPED_UNICODE);
+            }
+        } catch (\Throwable $e) {
             echo json_encode([
                 "success" => false,
                 "message" => "Error en el servidor: " . $e->getMessage()
@@ -528,7 +596,112 @@ class SolicitudController {
         }
     }
 
+    /**
+     * Obtener solicitud activa del practicante
+     * GET: /api/solicitudes/activa/{practicanteID}
+     */
+    public function obtenerSolicitudActiva($practicanteID) {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        try {
+            if (!isset($practicanteID) || !is_numeric($practicanteID)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'PracticanteID inválido'
+                ]);
+                return;
+            }
 
+            $resultado = $this->service->obtenerSolicitudActiva($practicanteID);
 
+            if ($resultado['success']) {
+                echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
+            } else {
+                echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
+            }
+
+        } catch (\Exception $e) {
+            error_log('Error en obtenerSolicitudActiva: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error al obtener solicitud activa: ' . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
+
+    /**
+     * Crear nueva solicitud
+     * POST: /api/solicitudes
+     */
+    public function crearNuevaSolicitud() {
+    header('Content-Type: application/json; charset=utf-8');
+    
+    try {
+        $input = json_decode(file_get_contents('php://input'), true);
+        $practicanteID = $input['practicanteID'] ?? null;
+        $migrarDocumentos = $input['migrarDocumentos'] ?? false; // 🔑 Nuevo parámetro
+
+        if (!$practicanteID || !is_numeric($practicanteID)) {
+            http_response_code(400);
+            echo json_encode([
+                'success' => false,
+                'mensaje' => 'PracticanteID es requerido y debe ser numérico'
+            ]);
+            return;
+        }
+
+        // 🔑 Pasar parámetro de migración al servicio
+        $resultado = $this->service->crearNuevaSolicitud($practicanteID, $migrarDocumentos);
+
+        if ($resultado['success']) {
+            http_response_code(201);
+            echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
+        } else {
+            http_response_code(400);
+            echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
+        }
+
+    } catch (\Exception $e) {
+        error_log('Error en crearNuevaSolicitud: ' . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'mensaje' => 'Error al crear solicitud: ' . $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
+    }
+}
+
+    /**
+     * Obtener historial completo de solicitudes
+     * GET: /api/solicitudes/historial/{practicanteID}
+     */
+    public function obtenerHistorialSolicitudes($practicanteID) {
+        header('Content-Type: application/json; charset=utf-8');
+        
+        try {
+            if (!isset($practicanteID) || !is_numeric($practicanteID)) {
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'PracticanteID inválido'
+                ]);
+                return;
+            }
+
+            $resultado = $this->service->obtenerHistorialSolicitudes($practicanteID);
+
+            echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
+
+        } catch (\Exception $e) {
+            error_log('Error en obtenerHistorialSolicitudes: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error al obtener historial: ' . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    }
 
 }

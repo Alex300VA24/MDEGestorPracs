@@ -475,6 +475,27 @@ switch (true) {
         $controller->generarCertificado();
         break;
 
+    // 🆕 NUEVOS ENDPOINTS PARA MÚLTIPLES SOLICITUDES
+    case preg_match('#^/api/solicitudes/activa/(\d+)$#', $path, $matches):
+        $controller = new \App\Controllers\SolicitudController();
+        $controller->obtenerSolicitudActiva($matches[1]);
+        break;
+
+    case $path === '/api/solicitudes/crear':
+        $controller = new \App\Controllers\SolicitudController();
+        $controller->crearNuevaSolicitud();
+        break;
+
+    case preg_match('#^/api/solicitudes/historial/(\d+)$#', $path, $matches):
+        $controller = new \App\Controllers\SolicitudController();
+        $controller->obtenerHistorialSolicitudes($matches[1]);
+        break;
+
+    case $path === '/api/solicitudes/obtenerPorTipoYSolicitud':
+        $controller = new \App\Controllers\SolicitudController();
+        $controller->obtenerDocumentoPorTipoYSolicitud();
+        break;
+
     // ============================================
     // RUTAS DE VISTAS
     // ============================================

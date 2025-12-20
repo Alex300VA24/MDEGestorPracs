@@ -242,6 +242,17 @@ class API {
         return this.get(`/solicitudes/obtenerPorTipoYPracticante?practicanteID=${practicanteID}&tipoDocumento=${tipoDocumento}`);
     }
 
+    async obtenerDocumentoPorTipoYSolicitud(solicitudID, tipoDocumento) {
+        return this.get(`/solicitudes/obtenerPorTipoYSolicitud?solicitudID=${solicitudID}&tipoDocumento=${tipoDocumento}`);
+    }
+
+    async crearNuevaSolicitudConMigracion(practicanteID, migrarDocumentos = true) {
+        return this.post('/solicitudes/crear', { 
+            practicanteID,
+            migrarDocumentos 
+        });
+    }
+
     async subirDocumento(formData) {
         await this.ensureCSRF();
         const response = await fetch(`${this.baseURL}/solicitudes/subirDocumento`, {
@@ -302,11 +313,31 @@ class API {
         return this.get(`/solicitudes/estado?solicitudID=${solicitudID}`);
     }
 
-    /* Crear solicitud usando la id del practicante
-     * Parametro: practicanteID
+    /* Obtener solicitud ACTIVA del practicante (la que está en proceso)
+    * Parametro: practicanteID
     */
+    async obtenerSolicitudActiva(practicanteID) {
+        return this.get(`/solicitudes/activa/${practicanteID}`);
+    }
+
+    /* Crear nueva solicitud (con validación de solicitudes activas)
+    * Parametro: practicanteID
+    */
+    async crearNuevaSolicitud(practicanteID) {
+        return this.post('/solicitudes/crear', { practicanteID });
+    }
+
+    /* Obtener historial completo de solicitudes del practicante
+    * Parametro: practicanteID
+    */
+    async obtenerHistorialSolicitudes(practicanteID) {
+        return this.get(`/solicitudes/historial/${practicanteID}`);
+    }
+
+    /* MANTENER el método antiguo para compatibilidad */
     async crearSolicitud(practicanteID) {
-        return this.get(`/solicitudes/crearSolicitud?practicanteID=${practicanteID}`);
+        console.warn('⚠️ crearSolicitud() está deprecado, usa crearNuevaSolicitud()');
+        return this.crearNuevaSolicitud(practicanteID);
     }
 
 
@@ -510,7 +541,8 @@ class API {
 
 const api = new API();
 let _alertMixin = null;
-window.mostrarAlerta = function({
+
+window.mostrarAlertaApi = function({
     tipo = "info",
     titulo = "",
     mensaje = "",
@@ -521,7 +553,7 @@ window.mostrarAlerta = function({
     input = null,
     inputPlaceholder = "",
     inputValue = "",
-    html = null,
+    html = '<h1>Gustavo</h1>',
     allowOutsideClick = false,
     allowEscapeKey = false,
     width = "32em",

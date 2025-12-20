@@ -98,7 +98,7 @@ window.initUsuarios = function() {
         }
         
         tbody.innerHTML = usuarios.map(usuario => {
-            const estadoBadge = usuario.Activo 
+            const estadoBadge = parseInt(usuario.Activo) 
                 ? '<span class="badge badge-success"><i class="fas fa-check"></i> Activo</span>'
                 : '<span class="badge badge-danger"><i class="fas fa-times"></i> Inactivo</span>';
             
@@ -273,7 +273,7 @@ window.initUsuarios = function() {
                             </div>
                             <div style="margin-bottom: 1rem;">
                                 <strong><i class="fas fa-toggle-on"></i> Estado:</strong> 
-                                ${usuario.Activo ? '<span style="color: #28a745;">✓ Activo</span>' : '<span style="color: #dc3545;">✗ Inactivo</span>'}
+                                ${parseInt(usuario.Activo) ? '<span style="color: #28a745;">✓ Activo</span>' : '<span style="color: #dc3545;">✗ Inactivo</span>'}
                             </div>
                         </div>
                     `,
@@ -303,8 +303,9 @@ window.initUsuarios = function() {
                 document.getElementById('cuiUsuario').value = usuarioEditando.DNI + usuarioEditando.CUI; // Últimos 9 dígitos
                 document.getElementById('rolUsuario').value = obtenerValorCargo(usuarioEditando.NombreCargo);
                 document.getElementById('areaUsuario').value = usuarioEditando.AreaID;
-                document.getElementById('estadoUsuario').value = usuarioEditando.Activo ? '1' : '0';
-                document.getElementById('estadoUsuarioGroup').style.display = 'block';
+                document.getElementById('estadoUsuario').value = parseInt(usuarioEditando.Activo) ? '1' : '0';
+                
+
                 
                 // Hacer contraseña opcional en edición
                 document.getElementById('password').required = false;
@@ -314,6 +315,7 @@ window.initUsuarios = function() {
                 document.getElementById('passwordLabel').textContent = '(opcional)';
                 document.getElementById('confirmarPasswordLabel').textContent = '(opcional)';
                 
+                document.getElementById('estadoUsuarioGroup').style.display = 'block';
                 abrirModalUser('modalUsuario');
             }
         } catch (error) {

@@ -237,40 +237,67 @@ async function ejecutarUnaVez(boton, accionAsync) {
 
 // Función global para mostrar alertas
 window.mostrarAlerta = function({
-        tipo = "info",
-        titulo = "",
-        mensaje = "",
-        showConfirmButton = true,
-        showCancelButton = false,
-        confirmText = "Aceptar",
-        cancelText = "Cancelar",
-        input = null,
-        inputPlaceholder = "",
-        inputValue = "",
-        callback = null
-    }) {
-        
-        // IMPORTANTE: devolver la promesa
-        return Swal.fire({
-            icon: tipo,
-            title: titulo,
-            text: mensaje,
-            position: "center",
-            showConfirmButton,
-            showCancelButton,
-            confirmButtonText: confirmText,
-            cancelButtonText: cancelText,
-            input,
-            inputPlaceholder,
-            inputValue,
-            backdrop: true,
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-        }).then((result) => {
-            if (callback) callback(result);
-            return result; // También devolver el resultado
+    tipo = "info",
+    titulo = "",
+    mensaje = "",
+    showConfirmButton = true,
+    showCancelButton = false,
+    confirmText = "Aceptar",
+    cancelText = "Cancelar",
+    input = null,
+    inputPlaceholder = "",
+    inputValue = "",
+    html = null,
+    allowOutsideClick = false,
+    allowEscapeKey = false,
+    width = "32em",
+    callback = null
+}) {
+    if (!_alertMixin && typeof Swal !== "undefined") {
+        _alertMixin = Swal.mixin({
+            buttonsStyling: false,
+            customClass: {
+                confirmButton: "btn btn-primary",
+                cancelButton: "btn btn-secondary",
+                denyButton: "btn btn-warning",
+                actions: "swal2-actions",
+            }
         });
     }
+
+    const instance = _alertMixin || Swal;
+
+    const config = {
+        icon: tipo,
+        title: titulo,
+        position: "center",
+        showConfirmButton,
+        showCancelButton,
+        confirmButtonText: confirmText,
+        cancelButtonText: cancelText,
+        input,
+        inputPlaceholder,
+        inputValue,
+        backdrop: true,
+        allowOutsideClick,
+        allowEscapeKey,
+        width,
+        heightAuto: false // 🔑 CLAVE
+    };
+
+
+    // 🔑 CLAVE: solo UNO
+    if (html) {
+        config.html = html;
+    } else {
+        config.text = mensaje;
+    }
+
+    return instance.fire(config).then((result) => {
+        if (callback) callback(result);
+        return result;
+    });
+};
 
 
 

@@ -77,7 +77,7 @@
         <option value="F">Femenino</option>
       </select>
       
-      <input type="text" id="Carrera" name="Carrera" placeholder="Ej: Ingeniería de Sistemas, Licenciatura en Administración" required minlength="15" title="Escriba el nombre completo de la carrera (mínimo 15 caracteres)">
+      <input type="text" id="Carrera" name="Carrera" placeholder="Ej: Ingeniería de Sistemas, Administración" required minlength="10" title="Escriba el nombre completo de la carrera (mínimo 15 caracteres)">
       
       <input type="email" id="Email" name="Email" placeholder="Ej: correo@ejemplo.com" required pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" title="Ingrese un correo válido con @ y dominio">
       
@@ -87,7 +87,7 @@
       
       <input type="text" id="Universidad" name="Universidad" placeholder="Ej: Universidad Nacional de Trujillo, Universidad Privada Antenor Orrego" required minlength="20" title="Escriba el nombre completo de la universidad (mínimo 20 caracteres)">
       
-      <button type="submit">Guardar</button>
+      <button type="submit" id="btnGuardarPracticante">Guardar</button>
       <button type="button" onclick="cerrarModalPracticante()">Cancelar</button>
     </form>
   </div>

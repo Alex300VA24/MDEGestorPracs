@@ -3,7 +3,7 @@
         <div class="sidebar-header">
             <img class="sidebar-logo" src="<?= BASE_URL ?>assets/images/logo.png" alt="Logo">
             <div class="sidebar-title">MDE</div>
-            <div class="sidebar-subtitle">Gestión de <?= getenv('ETIQUETA') ?>s</div>
+            <div class="sidebar-subtitle">Gestión de Practicantes</div>
         </div>
 
         <?php

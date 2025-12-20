@@ -593,7 +593,7 @@ window.initReportes = function() {
                 </div>
                 <div class="stats-summary">
                     <span class="badge bg-info">Total Asistencias: ${datos.totalAsistencias}</span>
-                    <span class="badge bg-success">Total Horas: ${datos.totalHoras}</span>
+                    <span class="badge bg-success">Total Horas: ${parseFloat(datos.totalHoras).toFixed(2)}</span>
                 </div>
             </div>
             
@@ -619,7 +619,7 @@ window.initReportes = function() {
                         <td>${a.TurnoNombre}</td>
                         <td>${a.HoraEntrada || 'N/A'}</td>
                         <td>${a.HoraSalida || 'En proceso'}</td>
-                        <td>${a.HorasTrabajadas ? a.HorasTrabajadas + ' hrs' : '-'}</td>
+                        <td>${a.HorasTrabajadas ? parseFloat(a.HorasTrabajadas).toFixed(2) + ' hrs' : '-'}</td>
                     </tr>
                 `;
             });
@@ -676,7 +676,7 @@ window.initReportes = function() {
                         <td>${a.TurnoNombre}</td>
                         <td>${a.HoraEntrada}</td>
                         <td>${a.HoraSalida || 'En proceso'}</td>
-                        <td>${a.HorasTrabajadas ? a.HorasTrabajadas + ' hrs' : '-'}</td>
+                        <td>${a.HorasTrabajadas ? parseFloat(a.HorasTrabajadas).toFixed(2) + ' hrs' : '-'}</td>
                     </tr>
                 `;
             });
@@ -907,7 +907,7 @@ window.initReportes = function() {
                     <div class="stat-card">
                         <div class="stat-icon bg-warning"><i class="fas fa-clock"></i></div>
                         <div class="stat-info">
-                            <h3>${datos.promedioHorasDiarias}</h3>
+                            <h3>${parseFloat(datos.promedioHorasDiarias).toFixed(2)}</h3>
                             <p>Promedio Horas/Día</p>
                         </div>
                     </div>
@@ -1093,7 +1093,7 @@ window.initReportes = function() {
                     <div class="col-md-4">
                         <div class="stat-box">
                             <span class="stat-label">Promedio Horas/Día:</span>
-                            <span class="stat-value">${datos.estadisticas.promedioHorasDiarias}</span>
+                            <span class="stat-value">${parseFloat(datos.estadisticas.promedioHorasDiarias).toFixed(2)}</span>
                         </div>
                     </div>
                 </div>

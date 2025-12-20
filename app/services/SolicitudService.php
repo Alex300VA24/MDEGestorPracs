@@ -2,12 +2,15 @@
 namespace App\Services;
 
 use App\Repositories\SolicitudRepository;
+use App\Repositories\EstadoRepository;
 
 class SolicitudService {
     private $repo;
+    private $estadoRepo;
 
     public function __construct() {
         $this->repo = new SolicitudRepository();
+        $this->estadoRepo = new EstadoRepository();
     }
 
     public function obtenerDocumentosPorPracticante($id) {
@@ -25,6 +28,13 @@ class SolicitudService {
 
     public function obtenerDocumentoPorTipoYPracticante($practicanteID, $tipoDocumento) {
         return $this->repo->obtenerDocumentoPorTipoYPracticante($practicanteID, $tipoDocumento);
+    }
+
+    /**
+     * Obtener documento por solicitud y tipo
+     */
+    public function obtenerDocumentoPorTipoYSolicitud($solicitudID, $tipoDocumento) {
+        return $this->repo->obtenerDocumentoPorTipoYSolicitud($solicitudID, $tipoDocumento);
     }
 
     // Agregar a SolicitudService
@@ -88,12 +98,12 @@ class SolicitudService {
                 ];
             }
 
-            // Validar formato del expediente
-            if (!preg_match('/^\d{4,6}-\d{4}-\d{1,2}$/', $numeroExpediente)) {
+            // Validar formato del expediente (5 o 6 dígitos al inicio)
+            if (!preg_match('/^\d{5,6}-\d{4}-\d{1,2}$/', $numeroExpediente)) {
                 error_log("Error: formato de expediente inválido: $numeroExpediente");
                 return [
                     'success' => false,
-                    'message' => 'Formato de expediente inválido. Use: XXXXX-YYYY-X'
+                    'message' => 'Formato de expediente inválido. Use: XXXXX-YYYY-X o XXXXXX-YYYY-X'
                 ];
             }
 
@@ -253,5 +263,148 @@ class SolicitudService {
             error_log("Error en listarSolicitudesAprobadas: " . $e->getMessage());
             return [];
         }
+    }
+
+    /**
+     * Obtener solicitud activa del practicante
+     * Estados activos: REV (En Revisión), APR (Aprobado), PEN (Pendiente)
+     */
+    public function obtenerSolicitudActiva($practicanteID) {
+        $solicitud = $this->repo->obtenerSolicitudActivaPorPracticante($practicanteID);
+
+        if ($solicitud) {
+            // Formatear fecha si es DateTime
+            if (isset($solicitud['FechaSolicitud']) && $solicitud['FechaSolicitud'] instanceof \DateTime) {
+                $solicitud['FechaSolicitud'] = $solicitud['FechaSolicitud']->format('Y-m-d H:i:s');
+            }
+
+            return [
+                'success' => true,
+                'data' => $solicitud,
+                'mensaje' => 'Solicitud activa encontrada'
+            ];
+        } else {
+            return [
+                'success' => false,
+                'data' => null,
+                'mensaje' => 'No hay solicitud activa. El practicante puede crear una nueva.'
+            ];
+        }
+    }
+
+    /**
+     * Crear nueva solicitud con validación de solicitudes activas
+     */
+    public function crearNuevaSolicitud($practicanteID, $migrarDocumentos = false) {
+    // 1️⃣ Validar que NO tenga solicitudes activas
+    $tieneSolicitudActiva = $this->repo->tieneSolicitudesActivas($practicanteID);
+
+    if ($tieneSolicitudActiva) {
+        return [
+            'success' => false,
+            'mensaje' => 'El practicante ya tiene una solicitud activa. No puede crear otra hasta que finalice o sea rechazada.'
+        ];
+    }
+
+    // 2️⃣ Obtener última solicitud si hay que migrar
+    $ultimaSolicitudID = null;
+    $documentosMigrados = 0;
+    
+    if ($migrarDocumentos) {
+        $ultimaSolicitud = $this->repo->obtenerUltimaSolicitudPorPracticante($practicanteID);
+        if ($ultimaSolicitud) {
+            $ultimaSolicitudID = $ultimaSolicitud['SolicitudID'];
+            error_log("📋 Se migraran documentos de solicitud #{$ultimaSolicitudID}");
+        }
+    }
+
+    // 3️⃣ Obtener EstadoID para "Pendiente" (PEN)
+    $estadoID = $this->estadoRepo->obtenerEstadoIDPorAbreviatura('PEN');
+
+    if (!$estadoID) {
+        throw new \Exception('Estado "Pendiente" no encontrado en la base de datos');
+    }
+
+    // 4️⃣ Crear nueva solicitud
+    $nuevaSolicitudID = $this->repo->crearSolicitudMultiple($practicanteID, $estadoID);
+
+    // 5️⃣ Migrar documentos si corresponde
+    if ($migrarDocumentos && $ultimaSolicitudID) {
+        try {
+            $documentosMigrados = $this->repo->migrarDocumentos($ultimaSolicitudID, $nuevaSolicitudID);
+            error_log("✅ Documentos migrados: {$documentosMigrados}");
+        } catch (\Exception $e) {
+            error_log("⚠️ Error al migrar documentos: " . $e->getMessage());
+            // No fallar la creación si falla la migración
+        }
+    }
+
+    return [
+        'success' => true,
+        'solicitudID' => $nuevaSolicitudID,
+        'mensaje' => 'Nueva solicitud creada exitosamente',
+        'documentosMigrados' => $documentosMigrados,
+        'solicitudAnterior' => $ultimaSolicitudID
+    ];
+}
+
+    /**
+     * Obtener historial completo de solicitudes del practicante
+     */
+    public function obtenerHistorialSolicitudes($practicanteID) {
+        $solicitudes = $this->repo->obtenerHistorialPorPracticante($practicanteID);
+
+        // Formatear fechas
+        foreach ($solicitudes as &$solicitud) {
+            if (isset($solicitud['FechaSolicitud']) && $solicitud['FechaSolicitud'] instanceof \DateTime) {
+                $solicitud['FechaSolicitud'] = $solicitud['FechaSolicitud']->format('Y-m-d H:i:s');
+            }
+        }
+
+        return [
+            'success' => true,
+            'data' => $solicitudes,
+            'total' => count($solicitudes)
+        ];
+    }
+
+    /**
+     * Obtener documentos de la solicitud ACTIVA del practicante
+     * Solo retorna documentos de solicitudes con estado PEN, REV o APR
+     */
+    public function obtenerDocumentosSolicitudActiva($practicanteID) {
+        $documentos = $this->repo->obtenerDocumentosSolicitudActiva($practicanteID);
+
+        // Formatear y procesar documentos
+        $documentosFormateados = [];
+        foreach ($documentos as $doc) {
+            // Formatear fecha
+            if (isset($doc['FechaSubida'])) {
+                if ($doc['FechaSubida'] instanceof \DateTime) {
+                    $doc['FechaSubida'] = $doc['FechaSubida']->format('Y-m-d H:i:s');
+                }
+            }
+
+            // Limpiar el prefijo '0x' del archivo hexadecimal
+            $archivo = $doc['Archivo'] ?? '';
+            if (strpos($archivo, '0x') === 0) {
+                $archivo = substr($archivo, 2);
+            }
+
+            $documentosFormateados[] = [
+                'documentoID' => $doc['DocumentoID'],
+                'solicitudID' => $doc['SolicitudID'],
+                'tipo' => $doc['TipoDocumento'],
+                'archivo' => $archivo,
+                'observaciones' => $doc['Observaciones'],
+                'fechaSubida' => $doc['FechaSubida']
+            ];
+        }
+
+        return [
+            'success' => true,
+            'data' => $documentosFormateados,
+            'total' => count($documentosFormateados)
+        ];
     }
 }

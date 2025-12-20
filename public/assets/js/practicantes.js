@@ -1,7 +1,17 @@
+window.recargarPracticantes = function() {
+    console.log("Recargando módulo de practicantes...");
+    if (window.cargarPracticantesFunc) {
+        window.cargarPracticantesFunc();
+    }
+};
+
 window.initPracticantes = function() {
     console.log("Practicantes iniciado");
     // TODO: aquí va tu código que antes se ejecutaba automáticamente
 
+    // 🔹 Banderas para evitar procesamiento múltiple
+    let procesandoPracticante = false;
+    let procesandoAceptacion = false;
 
     let modoEdicion = false;
     let idEdicion = null;
@@ -174,7 +184,7 @@ window.initPracticantes = function() {
             const estadoBadge = `<span class="status-badge status-${estadoClass}">${estadoDescripcion.toUpperCase()}</span>`;
 
             // Mostrar botón de aceptar solo si pertenece al área del usuario y es “Pendiente”
-            const mostrarBotonAceptar = !esRRHH && areaNombre === nombreAreaUsuario && estadoDescripcion === 'Pendiente';
+            const mostrarBotonAceptar = (areaNombre === nombreAreaUsuario) && estadoDescripcion === 'Pendiente';
 
             // Construir fila
             fila.innerHTML = `
@@ -186,9 +196,10 @@ window.initPracticantes = function() {
                 <td>${areaNombre}</td>
                 <td>${estadoBadge}</td>
                 <td>
-                    <button class="btn-primary" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
+                    ${esRRHH ? `
+                        <button class="btn-primary" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>` : ''}
                     <button class="btn-success" title="Ver">
                         <i class="fas fa-eye"></i>
                     </button>
@@ -196,18 +207,21 @@ window.initPracticantes = function() {
                         <button class="btn-warning" title="Aceptar">
                             <i class="fas fa-check"></i>
                         </button>` : ''}
-                    <button class="btn-danger" title="Eliminar">
-                        <i class="fas fa-trash"></i>
-                    </button>
+                    ${esRRHH ? `
+                        <button class="btn-danger" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>` : ''}
                 </td>
             `;
 
             tbody.appendChild(fila);
 
             // Asignar eventos
-            fila.querySelector('.btn-primary').addEventListener('click', () => abrirModalEditarPracticante(p.PracticanteID));
+            if (esRRHH) {
+                fila.querySelector('.btn-primary')?.addEventListener('click', () => abrirModalEditarPracticante(p.PracticanteID));
+                fila.querySelector('.btn-danger')?.addEventListener('click', () => eliminarPracticante(p.PracticanteID));
+            }
             fila.querySelector('.btn-success').addEventListener('click', () => verPracticante(p.PracticanteID));
-            fila.querySelector('.btn-danger').addEventListener('click', () => eliminarPracticante(p.PracticanteID));
             if (mostrarBotonAceptar) {
                 fila.querySelector('.btn-warning').addEventListener('click', () => abrirModalAceptar(p.PracticanteID));
             }
@@ -335,7 +349,7 @@ window.initPracticantes = function() {
 
     // --- FUNCIÓN PARA CARGAR LA TABLA ---
     // Cargar practicantes desde el backend y renderizar tabla
-    async function cargarPracticantes() {
+    const cargarPracticantes = async function() {
         try {
             const response = await api.getPracticantes();
             const practicantes = response.data || [];
@@ -402,9 +416,10 @@ window.initPracticantes = function() {
                     <td>${areaNombre}</td>
                     <td>${estadoBadge}</td>
                     <td>
-                        <button class="btn-primary" title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
+                        ${esRRHH ? `
+                            <button class="btn-primary" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>` : ''}
                         <button class="btn-success" title="Ver">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -412,18 +427,21 @@ window.initPracticantes = function() {
                             <button class="btn-warning" title="Aceptar">
                                 <i class="fas fa-check"></i>
                             </button>` : ''}
-                        <button class="btn-danger" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        ${esRRHH ? `
+                            <button class="btn-danger" title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>` : ''}
                     </td>
                 `;
 
                 tbody.appendChild(fila);
 
                 // Asignar eventos
-                fila.querySelector('.btn-primary').addEventListener('click', () => abrirModalEditarPracticante(p.PracticanteID));
+                if (esRRHH) {
+                    fila.querySelector('.btn-primary')?.addEventListener('click', () => abrirModalEditarPracticante(p.PracticanteID));
+                    fila.querySelector('.btn-danger')?.addEventListener('click', () => eliminarPracticante(p.PracticanteID));
+                }
                 fila.querySelector('.btn-success').addEventListener('click', () => verPracticante(p.PracticanteID));
-                fila.querySelector('.btn-danger').addEventListener('click', () => eliminarPracticante(p.PracticanteID));
                 if (mostrarBotonAceptar) {
                     fila.querySelector('.btn-warning').addEventListener('click', () => abrirModalAceptar(p.PracticanteID));
                 }
@@ -442,6 +460,10 @@ window.initPracticantes = function() {
             });
         }
     }
+
+    // Guardar referencia global para recargar desde otros módulos
+    window.cargarPracticantesFunc = cargarPracticantes;
+
     // ===================================== MENSAJES Y PRACTICANTES ====================================
 
     // 🔹 Variables globales
@@ -588,22 +610,22 @@ window.initPracticantes = function() {
             return;
         }
         
-        const areaUsuario = areaID();
-        const esAreaRRHH = esRRHH();
+        // Obtener datos del usuario
+        const nombreAreaUsuario = sessionStorage.getItem('nombreArea');
+        const esAreaRRHH = nombreAreaUsuario === 'Gerencia de Recursos Humanos';
         
         practicantes.forEach(p => {
             const tr = document.createElement('tr');
-            const mostrarBotonAceptar = !esAreaRRHH && 
-                                    p.AreaID == areaUsuario && 
-                                    p.EstadoDescripcion === 'Pendiente';
+            const mostrarBotonAceptar = ((p.NombreArea || p.Area) === nombreAreaUsuario) && 
+                                        p.EstadoDescripcion === 'Pendiente';
             
-            tr.innerHTML = crearFilaPracticante(p, mostrarBotonAceptar);
+            tr.innerHTML = crearFilaPracticante(p, mostrarBotonAceptar, esAreaRRHH);
             tbody.appendChild(tr);
         });
     }
 
     // 🔹 Crear HTML de fila de practicante
-    function crearFilaPracticante(p, mostrarBotonAceptar) {
+    function crearFilaPracticante(p, mostrarBotonAceptar, esAreaRRHH) {
         const estadoBadge = `<span class="status-badge status-${p.EstadoDescripcion.toLowerCase()}">${p.EstadoDescripcion || 'Pendiente'}</span>`;
         return `
             <td>${p.DNI}</td>
@@ -614,11 +636,12 @@ window.initPracticantes = function() {
             <td>${p.NombreArea || '-'}</td>
             <td>${estadoBadge}</td>
             <td>
-                <button onclick="editarPracticante(${p.PracticanteID})" 
-                        class="btn-primary" 
-                        title="Editar">
-                    <i class="fas fa-edit"></i>
-                </button>
+                ${esAreaRRHH ? `
+                    <button onclick="abrirModalEditarPracticante(${p.PracticanteID})" 
+                            class="btn-primary" 
+                            title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>` : ''}
                 <button onclick="verPracticante(${p.PracticanteID})" 
                         class="btn-success" 
                         title="Ver">
@@ -631,11 +654,12 @@ window.initPracticantes = function() {
                         <i class="fas fa-check"></i>
                     </button>
                 ` : ''}
-                <button onclick="eliminarPracticante(${p.PracticanteID})" 
-                        class="btn-danger" 
-                        title="Eliminar">
-                    <i class="fas fa-trash"></i>
-                </button>
+                ${esAreaRRHH ? `
+                    <button onclick="eliminarPracticante(${p.PracticanteID})" 
+                            class="btn-danger" 
+                            title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>` : ''}
             </td>
         `;
     }
@@ -772,39 +796,31 @@ window.initPracticantes = function() {
         hoy.setHours(0, 0, 0, 0);
 
         // Validaciones requeridas:
-        // 1) fechaEntrada no puede ser anterior a hoy
         if (entrada < hoy) {
             mostrarAlerta({tipo:'warning', mensaje:'La fecha de entrada no puede ser anterior a hoy.'});
             return false;
         }
 
-        // 2) fechaSalida no puede ser menor que fechaEntrada
         if (salida < entrada) {
             mostrarAlerta({tipo:'warning', mensaje:'La fecha de salida no puede ser anterior a la fecha de entrada.'});
             return false;
         }
 
-        // (Opcional) 3) si quieres evitar reservas de 0 noches, exigir salida > entrada:
         if (salida <= entrada) {
             mostrarAlerta({tipo:'warning', mensaje:'La fecha de salida debe ser posterior a la fecha de entrada.'});
             return false;
         }
 
-
-
-
         const btn = document.getElementById("btnEnviarRespuesta");
 
         try {
             const result = await ejecutarUnaVez(btn, async () => {
-                console.log(
-                    'Se envia: ', {
-                        practicanteID,
-                        solicitudID,
-                        fechaEntradaVal,
-                        fechaSalidaVal
-                    }
-                );
+                console.log('Se envia: ', {
+                    practicanteID,
+                    solicitudID,
+                    fechaEntradaVal,
+                    fechaSalidaVal
+                });
                 console.log(entrada, salida);
                 const response = await api.aceptarPracticante({
                     practicanteID: parseInt(practicanteID),
@@ -821,15 +837,18 @@ window.initPracticantes = function() {
 
             if (result.success) {
                 mostrarAlerta({tipo:'success', titulo:'Aceptado', mensaje:'Practicante aceptado correctamente'});
-                cargarPracticantes();
                 cerrarModalAceptar();
+                
+                // 🔹 RECARGAR LA TABLA para actualizar la vista
+                await cargarPracticantes();
+                
                 return true;
             } else {
-                mostrarAlerta({tipo:'error', titulo:'Error', mensaje:response.message});
+                mostrarAlerta({tipo:'error', titulo:'Error', mensaje:result.message});
                 return false;
             }
         } catch (error) {
-            mostrarAlerta({tipo:'error', titulo:'Error', mensaje:'Error al aceptar practicante' + error});
+            mostrarAlerta({tipo:'error', titulo:'Error', mensaje:'Error al aceptar practicante: ' + error.message});
             return false;
         }
     }
@@ -844,20 +863,24 @@ window.initPracticantes = function() {
                     solicitudID: parseInt(solicitudID),
                     mensajeRespuesta
                 });
-                if (!response.success) throw new Error(response.message || "Error al recharzar solicitud");
+                if (!response.success) throw new Error(response.message || "Error al rechazar solicitud");
                 return response;
             });
 
             if (result.success) {
                 mostrarAlerta({tipo:'info', mensaje:'Practicante rechazado correctamente'});
                 cerrarModalAceptar();
+                
+                // 🔹 RECARGAR LA TABLA para actualizar la vista
+                await cargarPracticantes();
+                
                 return true;
             } else {
-                mostrarAlerta({tipo:'error', titulo:'Error', mensaje:response.message});
+                mostrarAlerta({tipo:'error', titulo:'Error', mensaje:result.message});
                 return false;
             }
         } catch (error) {
-            mostrarAlerta({tipo:'error', titulo:'Error', mensaje:'Error al rechazar practicante'});
+            mostrarAlerta({tipo:'error', titulo:'Error', mensaje:'Error al rechazar practicante: ' + error.message});
             return false;
         }
     }
@@ -1025,8 +1048,18 @@ window.initPracticantes = function() {
         if (formPracticante) {
             formPracticante.onsubmit = null; // Limpiar handler previo
             
-            formPracticante.addEventListener("submit", async (e) => {
+            // 🔹 Definir el handler como función nombrada FUERA del addEventListener
+            async function handleSubmitPracticante(e) {
                 e.preventDefault();
+                
+                // 🔹 Obtener el botón de submit
+                const btnSubmit = e.target.querySelector('button[type="submit"]');
+                
+                // 🔹 Verificar si ya se está procesando
+                if (btnSubmit && btnSubmit.disabled) {
+                    console.warn("⚠️ Formulario ya está siendo procesado");
+                    return;
+                }
                 
                 // ========== VALIDAR ANTES DE ENVIAR ==========
                 if (!validarFormularioPracticante()) {
@@ -1038,6 +1071,15 @@ window.initPracticantes = function() {
                 let res;
 
                 try {
+                    // 🔹 Deshabilitar botón y cambiar texto
+                    if (btnSubmit) {
+                        btnSubmit.disabled = true;
+                        const textoOriginal = btnSubmit.textContent;
+                        btnSubmit.textContent = modoEdicion ? "Actualizando..." : "Registrando...";
+                        // Guardar texto original para restaurarlo después
+                        btnSubmit.dataset.textoOriginal = textoOriginal;
+                    }
+
                     if (modoEdicion) {
                         res = await api.actualizarPracticante(idEdicion, formData);
                     } else {
@@ -1045,18 +1087,37 @@ window.initPracticantes = function() {
                     }
 
                     if (res.success) {
-                        message = modoEdicion ? "Practicante actualizado correctamente" : "Practicante registrado con éxito"
-                        titulo = modoEdicion ? "Actualizado" : "Registrado"
+                        const message = modoEdicion ? "Practicante actualizado correctamente" : "Practicante registrado con éxito";
+                        const titulo = modoEdicion ? "Actualizado" : "Registrado";
                         mostrarAlerta({tipo:'success', titulo: titulo, mensaje: message});
                         cerrarModalPracticante();
                         await cargarPracticantes();
+                        
+                        // Recargar módulo de documentos si el practicante fue registrado exitosamente
+                        if (window.recargarDocumentos) {
+                            window.recargarDocumentos();
+                        }
                     } else {
                         mostrarAlerta({tipo:'error', titulo: 'Error', mensaje: res.message});
                     }
                 } catch (error) {
                     mostrarAlerta({tipo:'error', titulo: 'Error', mensaje: "Error en formulario: " + error.message});
+                } finally {
+                    // 🔹 SIEMPRE rehabilitar el botón, incluso si hay error
+                    if (btnSubmit) {
+                        btnSubmit.disabled = false;
+                        btnSubmit.textContent = btnSubmit.dataset.textoOriginal || (modoEdicion ? "Actualizar" : "Guardar");
+                    }
                 }
-            });
+            }
+
+            // 🔹 Limpiar evento anterior y agregar el nuevo
+            if (formPracticante) {
+                // Remover cualquier listener previo
+                formPracticante.removeEventListener("submit", handleSubmitPracticante);
+                // Agregar el nuevo listener
+                formPracticante.addEventListener("submit", handleSubmitPracticante);
+            }
         }
 
         // Select de decisión
@@ -1152,6 +1213,9 @@ window.initPracticantes = function() {
     window.cerrarModalEnviarSolicitud = cerrarModalEnviarSolicitud;
     window.actualizarTablaPracticantes = actualizarTablaPracticantes;
     window.cerrarModalPracticante = cerrarModalPracticante;
+    window.verPracticante = verPracticante;
+    window.abrirModalEditarPracticante = abrirModalEditarPracticante;
+    window.eliminarPracticante = eliminarPracticante;
 
 
     cargarPracticantes();

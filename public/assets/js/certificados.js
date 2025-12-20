@@ -138,10 +138,10 @@ window.initCertificados = function() {
                 return;
             }
 
-            // Validar formato del expediente (XXXXXX-YYYY-X)
-            const regexExpediente = /^\d{6}-\d{4}-\d{1}$/;
+            // Regex que acepta 5 o 6 dígitos al inicio
+            const regexExpediente = /^\d{5,6}-\d{4}-\d{1}$/;
             if (!regexExpediente.test(numeroExpediente)) {
-                mostrarMensajeDialog('Formato de expediente inválido. Use: XXXXXX-YYYY-X', 'error');
+                mostrarMensajeDialog('Formato de expediente inválido. Use: XXXXX-YYYY-X o XXXXXX-YYYY-X', 'error');
                 return;
             }
 
@@ -191,7 +191,7 @@ window.initCertificados = function() {
                 }
             } catch (error) {
                 console.error('Error:', error);
-                mostrarMensajeDialog('Error al generar el certificado', 'error');
+                mostrarMensajeDialog(error.message ||'Error al generar el certificado', 'error');
             } finally{
                 btnGenerar.disabled = false;
                 btnGenerar.innerHTML = '<i class="fas fa-download"></i> Generar Certificado';

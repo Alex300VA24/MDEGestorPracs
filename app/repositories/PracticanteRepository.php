@@ -18,7 +18,6 @@ class PracticanteRepository {
         }
     }
 
-
     // Metodo que devuelve un array de filas asociativas con los campos de sp_ListarPracticantes
 
     public function listarPracticantes() {

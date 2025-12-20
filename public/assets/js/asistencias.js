@@ -110,7 +110,22 @@ window.initAsistencias = function() {
                 fechaFormateada = `${String(f.getDate()).padStart(2,'0')}-${String(f.getMonth()+1).padStart(2,'0')}-${f.getFullYear()}`;
 
                 const permitirRegistro = esHoy(row.Fecha);
-                const btnDisabled = !permitirRegistro ? 'disabled' : '';
+                
+                // Validar si la fecha de inicio de prácticas es posterior a hoy
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+                let fechaInicioPosterior = false;
+                if (row.FechaInicioPracticas) {
+                    const partesFecha = row.FechaInicioPracticas.split('-');
+                    const fechaInicio = new Date(partesFecha[0], partesFecha[1] - 1, partesFecha[2]);
+                    fechaInicio.setHours(0, 0, 0, 0);
+                    fechaInicioPosterior = fechaInicio > hoy;
+                }
+                
+                const btnDisabled = (!permitirRegistro || fechaInicioPosterior) ? 'disabled' : '';
+                const btnTitle = fechaInicioPosterior 
+                    ? `El practicante inicia el ${row.FechaInicioPracticas}` 
+                    : (permitirRegistro ? 'Registrar asistencia' : 'Solo se puede registrar en el día actual');
 
                 tr.innerHTML = `
                     <td>${row.Fecha}</td>
@@ -121,7 +136,7 @@ window.initAsistencias = function() {
                     <td>${duracion}</td>
                     <td><span class="badge badge-${getBadgeClass(row.Estado)}">${row.Estado}</span></td>
                     <td>
-                        <button class="btn-primary" ${btnDisabled} onclick='abrirModalAsistencia(${row.PracticanteID}, "${row.NombreCompleto}", "${row.Fecha}")'>
+                        <button class="btn-primary" ${btnDisabled} title="${btnTitle}" onclick='abrirModalAsistencia(${row.PracticanteID}, "${row.NombreCompleto}", "${row.Fecha}", "${row.FechaInicioPracticas || ''}")'>
                             <i class="fas fa-clock"></i> Registrar
                         </button>
                     </td>
@@ -273,7 +288,7 @@ window.initAsistencias = function() {
     // ============================================
     // ABRIR MODAL CON CARGA DESDE API
     // ============================================
-    async function abrirModalAsistencia(practicanteID, nombreCompleto, fecha) {
+    async function abrirModalAsistencia(practicanteID, nombreCompleto, fecha, fechaInicioPracticas = '') {
         try {
 
             if (fecha && !esHoy(fecha)) {
@@ -283,6 +298,24 @@ window.initAsistencias = function() {
                     mensaje: 'Solo se puede registrar asistencia el día actual'
                 });
                 return;
+            }
+            
+            // Validar si la fecha de inicio de prácticas es posterior a hoy
+            if (fechaInicioPracticas) {
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+                const partesFecha = fechaInicioPracticas.split('-');
+                const fechaInicio = new Date(partesFecha[0], partesFecha[1] - 1, partesFecha[2]);
+                fechaInicio.setHours(0, 0, 0, 0);
+                
+                if (fechaInicio > hoy) {
+                    mostrarAlerta({
+                        tipo: 'warning', 
+                        titulo: 'Prácticas no iniciadas', 
+                        mensaje: `No se puede registrar asistencia. La fecha de inicio de prácticas (${fechaInicioPracticas}) es posterior a la fecha actual.`
+                    });
+                    return;
+                }
             }
             // Resetear estado anterior antes de abrir
             resetearEstadoModal();

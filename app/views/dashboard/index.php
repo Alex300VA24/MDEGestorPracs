@@ -3,7 +3,6 @@
 use App\Helpers\Permisos;
 require_once __DIR__ . '/../../helpers/Permisos.php';
 
-
 // 🔹 Obtener permisos según cargo
 $cargoID = $_SESSION['cargoID'];
 $permisos = Permisos::obtenerPermisos($cargoID);

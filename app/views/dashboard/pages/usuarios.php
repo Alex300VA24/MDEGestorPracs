@@ -343,7 +343,7 @@
                 </div>
 
                 <!-- Estado (solo en edición) -->
-                <div class="form-group hidden" id="estadoUsuarioGroup">
+                <div class="form-group" id="estadoUsuarioGroup">
                     <label for="estadoUsuario" class="form-label">
                         <i class="fas fa-toggle-on"></i>
                         Estado:

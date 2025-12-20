@@ -168,7 +168,7 @@
         </div>
 
         <div class="form-group">
-            <label for="cargoDirectorCarta">Cargo del Director:</label>
+            <label for="cargoDirectorCarta">Cargo:</label>
             <input 
                 type="text" 
                 id="cargoDirectorCarta" 
