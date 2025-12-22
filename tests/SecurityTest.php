@@ -12,7 +12,6 @@ use App\Security\InputValidator;
 use App\Security\PasswordUtil;
 use App\Security\RateLimiter;
 use App\Security\Authorization;
-use App\Security\AuditLogger;
 
 class SecurityTest extends TestCase {
     
@@ -213,8 +212,6 @@ class SecurityTest extends TestCase {
         $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         $_SERVER['HTTP_USER_AGENT'] = 'Test Agent';
         
-        // Esto debería crear un archivo de log
-        AuditLogger::logCreate('Usuario', 123, ['nombre' => 'Test']);
         
         // Verificar que el archivo existe
         $logFile = __DIR__ . '/../logs/audit.log';

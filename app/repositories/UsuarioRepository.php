@@ -15,37 +15,6 @@ class UsuarioRepository {
         $this->db = Database::getInstance()->getConnection();
     }
     
-    public function login($nombreUsuario, $password) {
-        try {
-            $sql = "EXEC sp_LoginUsuario @NombreUsuario = :nombreUsuario, @Password = :password";
-            $stmt = $this->db->prepare($sql);
-            $stmt->bindParam(':nombreUsuario', $nombreUsuario, PDO::PARAM_STR);
-            $stmt->bindParam(':password', $password, PDO::PARAM_STR);
-            $stmt->execute();
-            
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($result) {
-                return $this->mapToUsuario($result);
-            }
-            
-            return null;
-            
-        } catch (PDOException $e) {
-            // Obtener mensaje exacto del RAISERROR
-            $msg = $e->errorInfo[2] ?? $e->getMessage();
-
-            // Limpiar mensajes del driver ODBC
-            if (strpos($msg, ':') !== false) {
-                $parts = explode(':', $msg);
-                $msg = trim(end($parts)); // Última parte (que contiene tu mensaje)
-            }
-
-            throw new \Exception($msg);
-        }
-
-    }
-    
     public function validarCUI($usuarioID, $cui) {
         try {
             $sql = "EXEC sp_ValidarCUI @UsuarioID = :usuarioID, @CUI = :cui";
@@ -462,7 +431,7 @@ class UsuarioRepository {
         }
     }
     
-    private function mapToUsuario($data) {
+    public function mapToUsuario($data) {
         $usuario = new Usuario();
         $usuario->setUsuarioID($data['UsuarioID']);
         $usuario->setNombreUsuario($data['NombreUsuario']);
@@ -482,28 +451,6 @@ class UsuarioRepository {
         $area->setNombreArea($data['NombreArea']);
         $usuario->setArea($area);
 
-        return $usuario;
-    }
-    
-    public function mapRowToUsuario($data) {
-        $usuario = new Usuario();
-        $usuario->setUsuarioID($data['UsuarioID'] ?? null);
-        $usuario->setNombreUsuario($data['NombreUsuario'] ?? null);
-        $usuario->setNombres($data['Nombres'] ?? null);
-        $usuario->setApellidoPaterno($data['ApellidoPaterno'] ?? null);
-        $usuario->setApellidoMaterno($data['ApellidoMaterno'] ?? null);
-        $usuario->setEstadoID($data['EstadoID'] ?? null);
-        
-        $cargo = new Cargo();
-        $cargo->setCargoID($data['CargoID'] ?? null);
-        $cargo->setNombreCargo($data['NombreCargo'] ?? null);
-        $usuario->setCargo($cargo);
-        
-        $area = new Area();
-        $area->setAreaID($data['AreaID'] ?? null);
-        $area->setNombreArea($data['NombreArea'] ?? null);
-        $usuario->setArea($area);
-        
         return $usuario;
     }
 

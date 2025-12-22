@@ -4,45 +4,40 @@ namespace App\Services;
 use App\Repositories\UsuarioRepository;
 use App\Security\PasswordUtil;
 use App\Security\InputValidator;
-use App\Security\AuditLogger;
 
 class UsuarioService {
-    private $usuarioRepository;
+    private $repository;
     
     public function __construct() {
-        $this->usuarioRepository = new UsuarioRepository();
+        $this->repository = new UsuarioRepository();
     }
     
     public function login($nombreUsuario, $password) {
         // Validar inputs
         InputValidator::validateString($nombreUsuario, 1, 50);
         if (empty($password)) {
-            AuditLogger::logFailedLogin($nombreUsuario);
             throw new \Exception("Credenciales incorrectas");
         }
         
-        $row = $this->usuarioRepository->buscarPorNombreUsuario($nombreUsuario);
+        $row = $this->repository->buscarPorNombreUsuario($nombreUsuario);
         if (!$row || empty($row['Password'])) {
-            AuditLogger::logFailedLogin($nombreUsuario);
             throw new \Exception("Credenciales incorrectas");
         }
         
         $hash = $row['Password'];
         if (!PasswordUtil::verify($password, $hash)) {
-            AuditLogger::logFailedLogin($nombreUsuario);
             throw new \Exception("Credenciales incorrectas");
         }
         
         // Rehash si es necesario
         if (PasswordUtil::needsRehash($hash)) {
             $nuevoHash = PasswordUtil::hash($password);
-            $this->usuarioRepository->cambiarPassword($row['UsuarioID'], $nuevoHash);
+            $this->repository->cambiarPassword($row['UsuarioID'], $nuevoHash);
         }
         
-        $usuario = $this->usuarioRepository->mapRowToUsuario($row);
+        $usuario = $this->repository->mapToUsuario($row);
         
         // Registrar login exitoso
-        AuditLogger::logLogin($usuario->getUsuarioID(), $nombreUsuario);
         
         return $usuario;
     }
@@ -58,13 +53,9 @@ class UsuarioService {
             throw new \Exception("El CUI debe ser de 1 dígito");
         }
         
-        $usuario = $this->usuarioRepository->validarCUI($usuarioID, $cui);
+        $usuario = $this->repository->validarCUI($usuarioID, $cui);
         
         if ($usuario === null) {
-            AuditLogger::log(AuditLogger::ACTION_FAILED_LOGIN, 'Usuario', [
-                'usuarioID' => $usuarioID,
-                'reason' => 'CUI inválido'
-            ]);
             throw new \Exception("CUI incorrecto");
         }
         
@@ -75,7 +66,7 @@ class UsuarioService {
      * Listar todos los usuarios con información completa
      */
     public function listarTodos() {
-        return $this->usuarioRepository->listarTodos();
+        return $this->repository->listarTodos();
     }
 
     /**
@@ -83,7 +74,7 @@ class UsuarioService {
      */
     public function obtenerPorID($usuarioID) {
         InputValidator::validateInt($usuarioID, 1);
-        return $this->usuarioRepository->obtenerPorID($usuarioID);
+        return $this->repository->obtenerPorID($usuarioID);
     }
 
     /**
@@ -111,8 +102,7 @@ class UsuarioService {
             $data['password'] = PasswordUtil::hash($data['password']);
         }
         
-        $usuarioID = $this->usuarioRepository->crear($data);
-        AuditLogger::logCreate('Usuario', $usuarioID, ['nombreUsuario' => $data['nombreUsuario']]);
+        $usuarioID = $this->repository->crear($data);
         
         return $usuarioID;
     }
@@ -150,8 +140,7 @@ class UsuarioService {
             $data['password'] = PasswordUtil::hash($data['password']);
         }
         
-        $result = $this->usuarioRepository->actualizar($usuarioID, $data);
-        AuditLogger::logUpdate('Usuario', $usuarioID, $data);
+        $result = $this->repository->actualizar($usuarioID, $data);
         
         return $result;
     }
@@ -162,8 +151,7 @@ class UsuarioService {
     public function eliminar($usuarioID) {
         InputValidator::validateInt($usuarioID, 1);
         
-        $result = $this->usuarioRepository->eliminar($usuarioID);
-        AuditLogger::logDelete('Usuario', $usuarioID);
+        $result = $this->repository->eliminar($usuarioID);
         
         return $result;
     }
@@ -180,8 +168,7 @@ class UsuarioService {
         }
         
         $hash = PasswordUtil::hash($nuevaPassword);
-        $result = $this->usuarioRepository->cambiarPassword($usuarioID, $hash);
-        AuditLogger::logUpdate('Usuario', $usuarioID, ['password_changed' => true]);
+        $result = $this->repository->cambiarPassword($usuarioID, $hash);
         
         return $result;
     }
@@ -190,7 +177,7 @@ class UsuarioService {
      * Filtrar usuarios
      */
     public function filtrar($filtros) {
-        return $this->usuarioRepository->filtrar($filtros);
+        return $this->repository->filtrar($filtros);
     }
 
     /**
@@ -198,7 +185,7 @@ class UsuarioService {
      */
     public function existeNombreUsuario($nombreUsuario) {
         InputValidator::validateString($nombreUsuario, 1, 50);
-        return $this->usuarioRepository->existeNombreUsuario($nombreUsuario);
+        return $this->repository->existeNombreUsuario($nombreUsuario);
     }
 
     /**
@@ -207,7 +194,7 @@ class UsuarioService {
     public function existeNombreUsuarioExcepto($nombreUsuario, $usuarioID) {
         InputValidator::validateString($nombreUsuario, 1, 50);
         InputValidator::validateInt($usuarioID, 1);
-        return $this->usuarioRepository->existeNombreUsuarioExcepto($nombreUsuario, $usuarioID);
+        return $this->repository->existeNombreUsuarioExcepto($nombreUsuario, $usuarioID);
     }
 
     /**
@@ -215,7 +202,7 @@ class UsuarioService {
      */
     public function existeDNI($dni) {
         InputValidator::validateDNI($dni);
-        return $this->usuarioRepository->existeDNI($dni);
+        return $this->repository->existeDNI($dni);
     }
 
     /**

@@ -17,12 +17,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const response = await api.login(nombreUsuario, password);
             
-            if (response.success && response.data.requireCUI) {
+            if (response.success && response.message.requireCUI) {
                 // Mostrar modal de CUI
                 modalCUI.style.display = 'block';
-                sessionStorage.setItem('usuarioID', response.data.usuarioID);
-                sessionStorage.setItem('areaID', response.data.area.areaID);
-                sessionStorage.setItem('nombreArea', response.data.area.nombreArea);
+                sessionStorage.setItem('usuarioID', response.message.usuarioID);
+                sessionStorage.setItem('areaID', response.message.area.areaID);
+                sessionStorage.setItem('nombreArea', response.message.area.nombreArea);
             }
         } catch (error) {
             mostrarAlerta({tipo:'error', titulo: 'Error', mensaje:error.message });
@@ -51,22 +51,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('✅ Validación CUI exitosa:', response.data);
                 
                 // Renovar datos del usuario desde la respuesta del servidor
-                if (response.data && response.data.area) {
-                    sessionStorage.setItem('areaID', response.data.area.areaID);
-                    sessionStorage.setItem('nombreArea', response.data.area.nombreArea);
-                    console.log('📦 Guardado en sessionStorage - areaID:', response.data.area.areaID, 'nombreArea:', response.data.area.nombreArea);
+                if (response.message && response.message.area) {
+                    sessionStorage.setItem('areaID', response.message.area.areaID);
+                    sessionStorage.setItem('nombreArea', response.message.area.nombreArea);
+                    console.log('📦 Guardado en sessionStorage - areaID:', response.message.area.areaID, 'nombreArea:', response.message.area.nombreArea);
                 } else {
                     console.warn('⚠️ No hay datos de área en la respuesta:', response.data);
                 }
-                
-                if (response.data && response.data.usuarioID) {
-                    sessionStorage.setItem('usuarioID', response.data.usuarioID);
+
+                if (response.message && response.message.usuarioID) {
+                    sessionStorage.setItem('usuarioID', response.message.usuarioID);
                 }
-                if (response.data && response.data.cargoID) {
-                    sessionStorage.setItem('cargoID', response.data.cargoID);
+                if (response.message && response.message.cargoID) {
+                    sessionStorage.setItem('cargoID', response.message.cargoID);
                 }
-                if (response.data && response.data.nombreCargo) {
-                    sessionStorage.setItem('nombreCargo', response.data.nombreCargo);
+                if (response.message && response.message.nombreCargo) {
+                    sessionStorage.setItem('nombreCargo', response.message.nombreCargo);
                 }
                 
                 console.log('🔍 Estado de sessionStorage antes de redirect:', {

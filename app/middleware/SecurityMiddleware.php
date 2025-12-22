@@ -2,7 +2,6 @@
 namespace App\Middleware;
 
 use App\Security\Authorization;
-use App\Security\AuditLogger;
 use App\Config\SecurityConfig;
 
 /**
@@ -51,7 +50,6 @@ class SecurityMiddleware {
         self::checkAuthentication();
         
         if (!Authorization::hasPermission($permission)) {
-            AuditLogger::logPermissionDenied($permission, 'API');
             http_response_code(403);
             header('Content-Type: application/json');
             echo json_encode([
@@ -69,7 +67,6 @@ class SecurityMiddleware {
         self::checkAuthentication();
         
         if (!Authorization::hasRole($role)) {
-            AuditLogger::logPermissionDenied('access:' . $role, 'API');
             http_response_code(403);
             header('Content-Type: application/json');
             echo json_encode([

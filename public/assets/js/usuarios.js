@@ -1,9 +1,5 @@
 
 window.initUsuarios = function() {
-    console.log("Usuarios iniciado");
-    // ============================================
-    // GESTIÓN DE USUARIOS - FRONTEND
-    // ============================================
 
     let usuariosData = [];
     let usuarioEditando = null;
