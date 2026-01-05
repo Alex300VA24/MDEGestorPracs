@@ -4,9 +4,8 @@ window.initUsuarios = function() {
     let usuariosData = [];
     let usuarioEditando = null;
 
-    // ============================================
-    // INICIALIZACIÓN
-    // ============================================
+
+    /* INICIALIZACIÓN */
     const inicializar = async () => {
         cargarAreas();
         cargarUsuarios();

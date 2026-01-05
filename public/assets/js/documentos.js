@@ -30,7 +30,7 @@ window.initDocumentos = function() {
         try {
             const practicantes = await api.listarNombrePracticantes();
 
-            if (!practicantes || !Array.isArray(practicantes)) {
+            if (!practicantes || !Array.isArray(practicantes.data)) {
                 console.warn("La respuesta de la API no es un array válido de practicantes.");
                 return; 
             }
@@ -38,7 +38,7 @@ window.initDocumentos = function() {
             selectPracticanteDoc.innerHTML = '<option value="">Seleccionar practicante...</option>';
             selectPracticanteModal.innerHTML = '<option value="">Seleccionar practicante...</option>';
 
-            practicantes.forEach(p => {
+            practicantes.data.forEach(p => {
                 const option1 = new Option(p.NombreCompleto, p.PracticanteID);
                 const option2 = new Option(p.NombreCompleto, p.PracticanteID);
                 selectPracticanteDoc.add(option1);
@@ -145,7 +145,8 @@ window.initDocumentos = function() {
                 allowOutsideClick: false
             });
             
-            const response = await api.crearNuevaSolicitudConMigracion(
+            console.log();
+            const response = await api.crearNuevaSolicitud(
                 practicanteID, 
                 tieneHistorial // migrar solo si tiene historial
             );
@@ -154,15 +155,15 @@ window.initDocumentos = function() {
                 throw new Error(response.mensaje || response.message || "Error al crear solicitud");
             }
             
-            solicitudIDActual = response.solicitudID;
+            solicitudIDActual = response.data.solicitudID;
             
             console.log('✅ Nueva solicitud creada:', solicitudIDActual);
             
             // 🔑 Mensaje personalizado según si hubo migración
             let mensajeExito = `Nueva solicitud #${solicitudIDActual} creada exitosamente`;
             
-            if (response.documentosMigrados && response.documentosMigrados > 0) {
-                mensajeExito += `\n\n✅ Se transfirieron ${response.documentosMigrados} documento(s) de la solicitud anterior.`;
+            if (response.data.documentosMigrados && response.data.documentosMigrados > 0) {
+                mensajeExito += `\n\n✅ Se transfirieron ${response.data.documentosMigrados} documento(s) de la solicitud anterior.`;
             }
             
             mostrarAlerta({
@@ -734,11 +735,11 @@ window.initDocumentos = function() {
             const data = await api.obtenerDocumentosPorPracticante(practicanteID);
             console.log('📋 Documentos obtenidos:', data);
             
-            if (!data || !Array.isArray(data.data)) {
+            if (!data || !Array.isArray(data.data.data)) {
                 return { data: [] };
             }
 
-            return data;
+            return data.data;
         } catch (e) {
             console.error("❌ Error obteniendo documentos:", e);
             return { data: [] };

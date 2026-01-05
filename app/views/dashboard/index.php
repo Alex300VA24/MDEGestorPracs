@@ -64,3 +64,4 @@ $etiqueta = 'Practicante';
 
 
 <?php include __DIR__ . "/../layouts/footer.php"; ?>
+

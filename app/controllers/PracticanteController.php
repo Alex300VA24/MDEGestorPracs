@@ -3,212 +3,155 @@ namespace App\Controllers;
 
 use App\Services\PracticanteService;
 
-class PracticanteController {
+class PracticanteController extends BaseController {
     private $practicanteService;
     
     public function __construct($practicanteService = null) {
         $this->practicanteService = $practicanteService ?? new PracticanteService();
-        $this->checkAuth();
     }
     
-    // Metodo para saber si el usuario esta autenticado y darle permiso a ver el dashboard
-    private function checkAuth() {
-        if (!isset($_SESSION['authenticated']) || !$_SESSION['authenticated']) {
-            $this->jsonResponse([
-                'success' => false,
-                'message' => 'No autorizado'
-            ], 401);
-        }
-    }
-    
-    // Metodo listarPracticantes para llamar a services a la logica de negocio
+    /**
+     * GET /api/practicantes
+     */
     public function listarPracticantes() {
-        try {
-            $practicantes = $this->practicanteService->listarPracticantes();
-            $this->jsonResponse([
-                'success' => true,
-                'data' => $practicantes
-            ]);
-        } catch (\Exception $e) {
-            $this->jsonResponse([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
+        $this->executeServiceAction(function() {
+            $this->requireAuth();
+            return $this->practicanteService->listarPracticantes();
+        });
     }
     
-    // Metodo para obtener Practicante por su ID 
+    /**
+     * GET /api/practicantes/{id}
+     */
     public function obtener($practicanteID) {
-        try {
-            $practicante = $this->practicanteService->obtenerPorId($practicanteID);
-            $this->jsonResponse([
-                'success' => true,
-                'data' => $practicante
-            ]);
-        } catch (\Exception $e) {
-            $this->jsonResponse([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 404);
-        }
+        $this->executeServiceAction(function() use ($practicanteID) {
+            $this->requireAuth();
+            return $this->practicanteService->obtenerPorId($practicanteID);
+        });
     }
     
-    /* Metodo Controller para registrar un nuevo practicante 
-     * Lo que envia:
-        {
-            "success": true,
-            "message": "Practicante registrado exitosamente",
-            "data": {
-                "practicanteID": valor
-            }
-        }
-    */
+    /**
+     * POST /api/practicantes
+     */
     public function registrarPracticante() {
-        try {
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-                throw new \Exception("Método no permitido");
-            }
-
-            $json = file_get_contents('php://input');
-            $data = json_decode($json, true);
-
-            if (!$data) {
-                throw new \Exception("Datos JSON inválidos o vacíos");
-            }
-
+        $this->executeServiceAction(function() {
+            $this->requireAuth();
+            $this->validateMethod('POST');
+            
+            $data = $this->getJsonInput();
             $practicanteID = $this->practicanteService->registrarPracticante($data);
-
-            $this->jsonResponse([
-                'success' => true,
+            
+            return [
+                'data' => ['practicanteID' => $practicanteID],
                 'message' => 'Practicante registrado exitosamente',
-                'data' => ['practicanteID' => $practicanteID]
-            ], 201);
-
-        } catch (\Throwable $e) {
-            error_log("❌ Error al crear practicante: " . $e->getMessage());
-            $this->jsonResponse([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
+                'statusCode' => 201
+            ];
+        });
     }
-
-
-    // PUT /api/practicantes/{id}
+    
+    /**
+     * PUT /api/practicantes/{id}
+     */
     public function actualizar($id) {
-        $body = json_decode(file_get_contents("php://input"), true);
-        $msg = $this->practicanteService->actualizar($id, $body);
-        echo json_encode(['success' => true, 'message' => $msg]);
+        $this->executeServiceAction(function() use ($id) {
+            $this->requireAuth();
+            $this->validateMethod('PUT');
+            
+            $data = $this->getJsonInput();
+            $mensaje = $this->practicanteService->actualizar($id, $data);
+            
+            return [
+                'message' => $mensaje
+            ];
+        });
     }
-
-    public function eliminar($id){
-        header('Content-Type: application/json');
-
-        try {
-            $repository = new \App\Repositories\PracticanteRepository();
-            $resultado = $repository->eliminar($id);
-
-            if ($resultado) {
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'Practicante eliminado correctamente'
-                ]);
-            } else {
-                http_response_code(400);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'No se pudo eliminar el practicante'
-                ]);
-            }
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Error interno del servidor: ' . $e->getMessage()
-            ]);
-        }
+    
+    /**
+     * DELETE /api/practicantes/{id}
+     */
+    public function eliminar($id) {
+        $this->executeServiceAction(function() use ($id) {
+            $this->requireAuth();
+            $this->validateMethod('DELETE');
+            
+            $this->practicanteService->eliminar($id);
+            
+            return [
+                'message' => 'Practicante eliminado correctamente'
+            ];
+        });
     }
-
+    
+    /**
+     * POST /api/practicantes/filtrar
+     */
     public function filtrarPracticantes() {
-        try {
-            // Leer el json del body
-            $input = json_decode(file_get_contents('php://input'), true);
-
+        $this->executeServiceAction(function() {
+            $this->requireAuth();
+            $this->validateMethod('POST');
+            
+            $input = $this->getJsonInput();
             $nombre = $input['nombre'] ?? null;
             $areaID = $input['areaID'] ?? null;
             
-            $practicantes = $this->practicanteService->filtrarPracticantes($nombre, $areaID);
-            $this->jsonResponse([
-                'success' => true,
-                'data' => $practicantes
-            ]);
-        } catch (\Exception $e) {
-            $this->jsonResponse([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
+            return $this->practicanteService->filtrarPracticantes($nombre, $areaID);
+        });
     }
-
+    
+    /**
+     * POST /api/practicantes/aceptar
+     */
     public function aceptarPracticante() {
-        try {
-            $data = json_decode(file_get_contents('php://input'), true);
+        $this->executeServiceAction(function() {
+            $this->requireAuth();
+            $this->validateMethod('POST');
+            
+            $data = $this->getJsonInput();
             
             $this->practicanteService->aceptarPracticante(
-                $data['practicanteID'],
-                $data['solicitudID'],
-                $data['areaID'],
-                $data['fechaEntradaVal'],
-                $data['fechaSalidaVal'],
-                $data['mensajeRespuesta']
+                $data['practicanteID'] ?? null,
+                $data['solicitudID'] ?? null,
+                $data['areaID'] ?? null,
+                $data['fechaEntradaVal'] ?? null,
+                $data['fechaSalidaVal'] ?? null,
+                $data['mensajeRespuesta'] ?? null
             );
             
-            $this->jsonResponse([
-                'success' => true,
+            return [
                 'message' => 'Practicante aceptado correctamente'
-            ]);
-        } catch (\Exception $e) {
-            $this->jsonResponse([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
+            ];
+        });
     }
-
-
+    
+    /**
+     * POST /api/practicantes/rechazar
+     */
     public function rechazarPracticante() {
-        try {
-            $data = json_decode(file_get_contents('php://input'), true);
+        $this->executeServiceAction(function() {
+            $this->requireAuth();
+            $this->validateMethod('POST');
+            
+            $data = $this->getJsonInput();
             
             $this->practicanteService->rechazarPracticante(
-                $data['practicanteID'],
-                $data['solicitudID'],
-                $data['mensajeRespuesta']
+                $data['practicanteID'] ?? null,
+                $data['solicitudID'] ?? null,
+                $data['mensajeRespuesta'] ?? null
             );
             
-            $this->jsonResponse([
-                'success' => true,
+            return [
                 'message' => 'Practicante rechazado'
-            ]);
-        } catch (\Exception $e) {
-            $this->jsonResponse([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
+            ];
+        });
     }
-
-    public function listarNombresPracticantes() {
-        $data = $this->practicanteService->listarNombresPracticantes();
-        echo json_encode($data);
-    }
-
     
-    protected function jsonResponse($data, $status = 200) {
-        header('Content-Type: application/json; charset=utf-8');
-        http_response_code($status);
-        echo json_encode($data, JSON_UNESCAPED_UNICODE);
-        exit;
+    /**
+     * GET /api/practicantes/nombres
+     */
+    public function listarNombresPracticantes() {
+        $this->executeServiceAction(function() {
+            $this->requireAuth();
+            return $this->practicanteService->listarNombresPracticantes();
+        });
     }
-
 }

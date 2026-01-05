@@ -6,6 +6,12 @@ class Area {
     private $nombreArea;
     private $descripcion;
 
+    public function __construct($data = []) {
+        $this->areaID = $data['areaID'] ?? null;
+        $this->nombreArea = $data['nombreArea'] ?? null;
+        $this->descripcion = $data['descripcion'] ?? null;
+    }
+
     public function getAreaID() { return $this->areaID; }
     public function getNombreArea() { return $this->nombreArea; }
     public function getDescripcion() { return $this->descripcion; }

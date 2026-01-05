@@ -80,12 +80,12 @@ window.initAsistencias = function() {
 
             const response = await api.listarAsistencias(payload);
 
-            if (!response || !response.success || !Array.isArray(response.data.data)) {
+            if (!response || !response.success || !Array.isArray(response.data)) {
                 console.error("Error: formato de datos inválido", response);
                 return;
             }
 
-            const asistencias = response.data.data;
+            const asistencias = response.data;
             const tbody = document.getElementById('tableAsistenciasBody');
             tbody.innerHTML = '';
 

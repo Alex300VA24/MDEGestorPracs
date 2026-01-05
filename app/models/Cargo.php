@@ -6,6 +6,12 @@ class Cargo {
     private $nombreCargo;
     private $descripcion;
 
+    public function __construct($data = []) {
+        $this->cargoID = $data['cargoID'] ?? null;
+        $this->nombreCargo = $data['nombreCargo'] ?? null;
+        $this->descripcion = $data['descripcion'] ?? null;
+    }
+
     public function getCargoID() { return $this->cargoID; }
     public function getNombreCargo() { return $this->nombreCargo; }
     public function getDescripcion() { return $this->descripcion; }

@@ -3,11 +3,46 @@ namespace App\Middleware;
 
 use App\Security\Authorization;
 use App\Config\SecurityConfig;
+use App\Core\Request;
+use App\Security\SecurityHeaders;
 
 /**
  * Middleware de seguridad para validar requests
  */
 class SecurityMiddleware {
+
+    public static function initialize($config) {
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
+                || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+        
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'domain' => '',
+            'secure' => $isHttps,
+            'httponly' => true,
+            'samesite' => 'Strict'
+        ]);
+        
+        session_start();
+        SecurityHeaders::applyAllHeaders($isHttps);
+        
+        // CORS
+        $allowedOrigin = $config['cors']['allowed_origin'] ?? '*';
+        header('Access-Control-Allow-Origin: ' . $allowedOrigin);
+        header('Vary: Origin');
+        header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Authorization, X-CSRF-Token');
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+            http_response_code(200);
+            exit;
+        }
+    }
+
+    public function handle(Request $request) {
+        return true;
+    }
     
     /**
      * Validar autenticación y sesión

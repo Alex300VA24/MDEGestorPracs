@@ -5,37 +5,27 @@ namespace App\Repositories;
 use App\Config\Database;
 use PDO;
 
-class AsistenciaRepository
+class AsistenciaRepository extends BaseRepository
 {
-    private $conn;
-
-    public function __construct()
-    {
-        try {
-            $this->conn = Database::getInstance()->getConnection();
-        } catch (\Throwable $e) {
-            error_log("Error en conexión DB: " . $e->getMessage());
-            throw $e;
-        }
-    }
+    protected $table = 'Asistencia';
+    protected $primaryKey = 'AsistenciaID';
 
     /**
      * Verificar si existe asistencia para un turno específico
      */
     public function existeAsistenciaTurno($practicanteID, $fecha, $turnoID)
     {
-        try {
-            $stmt = $this->conn->prepare("
-                SELECT AsistenciaID 
-                FROM Asistencia 
-                WHERE PracticanteID = ? AND Fecha = ? AND TurnoID = ?
-            ");
-            $stmt->execute([$practicanteID, $fecha, $turnoID]);
-            return $stmt->fetch() !== false;
-        } catch (\Throwable $e) {
-            error_log("Error en existeAsistenciaTurno: " . $e->getMessage());
-            throw $e;
-        }
+        return $this->exists('PracticanteID', $practicanteID) && 
+               $this->executeQuery(
+                   "SELECT COUNT(*) as total FROM {$this->table} 
+                    WHERE PracticanteID = :practicanteID AND Fecha = :fecha AND TurnoID = :turnoID",
+                   [
+                       ':practicanteID' => $practicanteID,
+                       ':fecha' => $fecha,
+                       ':turnoID' => $turnoID
+                   ],
+                   'one'
+               )['total'] > 0;
     }
 
     /**
@@ -43,17 +33,10 @@ class AsistenciaRepository
      */
     public function existeAsistencia($practicanteID, $fecha)
     {
-        try {
-            $stmt = $this->conn->prepare("
-                SELECT AsistenciaID FROM Asistencia 
-                WHERE PracticanteID = ? AND Fecha = ?
-            ");
-            $stmt->execute([$practicanteID, $fecha]);
-            return $stmt->fetch() !== false;
-        } catch (\Throwable $e) {
-            error_log("Error en existeAsistencia: " . $e->getMessage());
-            throw $e;
-        }
+        return $this->count([
+            'PracticanteID' => $practicanteID,
+            'Fecha' => $fecha
+        ]) > 0;
     }
 
     /**
@@ -61,23 +44,18 @@ class AsistenciaRepository
      */
     public function registrarEntrada($practicanteID, $fecha, $horaEntrada, $turnoID)
     {
-        try {
-            $sqlInsert = "
-                INSERT INTO Asistencia (PracticanteID, Fecha, HoraEntrada, TurnoID)
-                VALUES (?, ?, ?, ?)
-            ";
-            $stmt = $this->conn->prepare($sqlInsert);
-            $stmt->execute([$practicanteID, $fecha, $horaEntrada, $turnoID]);
+        $asistenciaID = $this->insertWithOutput([
+            'PracticanteID' => $practicanteID,
+            'Fecha' => $fecha,
+            'HoraEntrada' => $horaEntrada,
+            'TurnoID' => $turnoID
+        ]);
 
-            return [
-                'success' => true,
-                'message' => 'Entrada registrada correctamente a las ' . $horaEntrada,
-                'asistenciaID' => $this->conn->lastInsertId()
-            ];
-        } catch (\Throwable $e) {
-            error_log("Error en registrarEntrada: " . $e->getMessage());
-            throw $e;
-        }
+        return [
+            'success' => true,
+            'message' => "Entrada registrada correctamente a las $horaEntrada",
+            'asistenciaID' => $asistenciaID
+        ];
     }
 
     /**
@@ -85,20 +63,17 @@ class AsistenciaRepository
      */
     public function obtenerAsistenciaActiva($practicanteID, $fecha)
     {
-        try {
-            $sql = "
-                SELECT AsistenciaID, HoraEntrada, TurnoID 
-                FROM Asistencia 
-                WHERE PracticanteID = ? AND Fecha = ? AND HoraSalida IS NULL
-                ORDER BY HoraEntrada DESC
-            ";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$practicanteID, $fecha]);
-            return $stmt->fetch(\PDO::FETCH_ASSOC);
-        } catch (\Throwable $e) {
-            error_log("Error en obtenerAsistenciaActiva: " . $e->getMessage());
-            throw $e;
-        }
+        return $this->executeQuery(
+            "SELECT TOP 1 AsistenciaID, HoraEntrada, TurnoID 
+             FROM {$this->table} 
+             WHERE PracticanteID = :practicanteID AND Fecha = :fecha AND HoraSalida IS NULL
+             ORDER BY HoraEntrada DESC",
+            [
+                ':practicanteID' => $practicanteID,
+                ':fecha' => $fecha
+            ],
+            'one'
+        );
     }
 
     /**
@@ -106,23 +81,18 @@ class AsistenciaRepository
      */
     public function registrarSalida($asistenciaID, $horaSalida)
     {
-        try {
-            $sqlUpdate = "
-                UPDATE Asistencia 
-                SET HoraSalida = ? 
-                WHERE AsistenciaID = ?
-            ";
-            $stmt = $this->conn->prepare($sqlUpdate);
-            $stmt->execute([$horaSalida, $asistenciaID]);
+        $updated = $this->update($asistenciaID, [
+            'HoraSalida' => $horaSalida
+        ]);
 
-            return [
-                'success' => true,
-                'message' => 'Salida registrada correctamente a las ' . $horaSalida
-            ];
-        } catch (\Throwable $e) {
-            error_log("Error en registrarSalida: " . $e->getMessage());
-            throw $e;
+        if (!$updated) {
+            throw new \Exception("No se pudo registrar la salida");
         }
+
+        return [
+            'success' => true,
+            'message' => "Salida registrada correctamente a las $horaSalida"
+        ];
     }
 
     /**
@@ -130,19 +100,15 @@ class AsistenciaRepository
      */
     public function tienePausaActiva($asistenciaID)
     {
-        try {
-            $stmt = $this->conn->prepare("
-                SELECT COUNT(*) as total 
-                FROM Pausa 
-                WHERE AsistenciaID = ? AND HoraFin IS NULL
-            ");
-            $stmt->execute([$asistenciaID]);
-            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-            return $row['total'] > 0;
-        } catch (\Throwable $e) {
-            error_log("Error en tienePausaActiva: " . $e->getMessage());
-            throw $e;
-        }
+        return $this->count([
+            'AsistenciaID' => $asistenciaID
+        ], 'Pausa') > 0 && 
+        $this->executeQuery(
+            "SELECT COUNT(*) as total FROM Pausa 
+             WHERE AsistenciaID = :asistenciaID AND HoraFin IS NULL",
+            [':asistenciaID' => $asistenciaID],
+            'one'
+        )['total'] > 0;
     }
 
     /**
@@ -150,28 +116,28 @@ class AsistenciaRepository
      */
     public function iniciarPausa($asistenciaID, $horaInicio, $motivo)
     {
-        try {
-            $sqlInsert = "
-                INSERT INTO Pausa (AsistenciaID, HoraInicio, Motivo)
-                VALUES (?, ?, ?)
-            ";
-            $stmt = $this->conn->prepare($sqlInsert);
-            $stmt->execute([$asistenciaID, $horaInicio, $motivo]);
+        $sql = "INSERT INTO Pausa (AsistenciaID, HoraInicio, Motivo)
+                OUTPUT INSERTED.PausaID
+                VALUES (:asistenciaID, :horaInicio, :motivo)";
 
-            $pausaID = $this->conn->lastInsertId();
+        $result = $this->executeQuery(
+            $sql,
+            [
+                ':asistenciaID' => $asistenciaID,
+                ':horaInicio' => $horaInicio,
+                ':motivo' => $motivo
+            ],
+            'one'
+        );
 
-            return [
-                'success' => true,
-                'message' => 'Pausa iniciada correctamente',
-                'data' => [
-                    'pausaID' => $pausaID,
-                    'horaInicio' => $horaInicio
-                ]
-            ];
-        } catch (\Throwable $e) {
-            error_log("Error en iniciarPausa: " . $e->getMessage());
-            throw $e;
-        }
+        return [
+            'success' => true,
+            'message' => 'Pausa iniciada correctamente',
+            'data' => [
+                'pausaID' => $result['PausaID'],
+                'horaInicio' => $horaInicio
+            ]
+        ];
     }
 
     /**
@@ -179,39 +145,36 @@ class AsistenciaRepository
      */
     public function finalizarPausa($pausaID, $horaFin)
     {
-        try {
-            // Obtener hora de inicio para calcular duración
-            $sqlGet = "SELECT HoraInicio FROM Pausa WHERE PausaID = ?";
-            $stmtGet = $this->conn->prepare($sqlGet);
-            $stmtGet->execute([$pausaID]);
-            $pausa = $stmtGet->fetch(\PDO::FETCH_ASSOC);
+        // Obtener hora de inicio
+        $pausa = $this->executeQuery(
+            "SELECT HoraInicio FROM Pausa WHERE PausaID = :pausaID",
+            [':pausaID' => $pausaID],
+            'one'
+        );
 
-            if (!$pausa) {
-                throw new \Exception("Pausa no encontrada");
-            }
-
-            // Actualizar pausa
-            $sqlUpdate = "UPDATE Pausa SET HoraFin = ? WHERE PausaID = ?";
-            $stmtUpdate = $this->conn->prepare($sqlUpdate);
-            $stmtUpdate->execute([$horaFin, $pausaID]);
-
-            // Calcular duración en segundos
-            $inicio = new \DateTime($pausa['HoraInicio']);
-            $fin = new \DateTime($horaFin);
-            $duracion = $fin->getTimestamp() - $inicio->getTimestamp();
-
-            return [
-                'success' => true,
-                'message' => 'Pausa finalizada correctamente',
-                'data' => [
-                    'horaFin' => $horaFin,
-                    'duracionPausa' => $duracion
-                ]
-            ];
-        } catch (\Throwable $e) {
-            error_log("Error en finalizarPausa: " . $e->getMessage());
-            throw $e;
+        if (!$pausa) {
+            throw new \Exception("Pausa no encontrada");
         }
+
+        // Actualizar pausa
+        $this->updateWhereTable('Pausa', 
+            ['HoraFin' => $horaFin],
+            ['PausaID' => $pausaID]
+        );
+
+        // Calcular duración
+        $inicio = new \DateTime($pausa['HoraInicio']);
+        $fin = new \DateTime($horaFin);
+        $duracion = $fin->getTimestamp() - $inicio->getTimestamp();
+
+        return [
+            'success' => true,
+            'message' => 'Pausa finalizada correctamente',
+            'data' => [
+                'horaFin' => $horaFin,
+                'duracionPausa' => $duracion
+            ]
+        ];
     }
 
     /**
@@ -219,21 +182,14 @@ class AsistenciaRepository
      */
     public function obtenerPausas($asistenciaID)
     {
-        try {
-            $sql = "
-                SELECT PausaID, HoraInicio, HoraFin, Motivo
-                FROM Pausa
-                WHERE AsistenciaID = ?
-                ORDER BY HoraInicio
-            ";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$asistenciaID]);
-
-            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        } catch (\Throwable $e) {
-            error_log("Error en obtenerPausas: " . $e->getMessage());
-            throw $e;
-        }
+        return $this->executeQuery(
+            "SELECT PausaID, HoraInicio, HoraFin, Motivo
+             FROM Pausa
+             WHERE AsistenciaID = :asistenciaID
+             ORDER BY HoraInicio",
+            [':asistenciaID' => $asistenciaID],
+            'all'
+        );
     }
 
     /**
@@ -241,160 +197,139 @@ class AsistenciaRepository
      */
     public function obtenerAsistenciasPorArea($areaID, $fecha = null)
     {
-        try {
-            error_log("===> Repository obtenerAsistenciasPorArea con areaID: $areaID");
+        $fechaConsulta = $fecha ?? date('Y-m-d');
 
-            // Si no hay fecha específica, usar fecha de hoy
-            $fechaConsulta = $fecha ?? date('Y-m-d');
+        $sql = "
+            SELECT 
+                p.PracticanteID,
+                CONCAT(p.Nombres, ' ', p.ApellidoPaterno, ' ', p.ApellidoMaterno) AS NombreCompleto,
+                p.FechaEntrada AS FechaInicioPracticas,
+                a.AsistenciaID,
+                a.Fecha,
+                a.HoraEntrada,
+                a.HoraSalida,
+                a.TurnoID,
+                t.Descripcion AS Turno,
+                CASE 
+                    WHEN a.AsistenciaID IS NULL THEN 'Sin registro'
+                    WHEN a.HoraEntrada IS NULL THEN 'Ausente'
+                    WHEN a.HoraSalida IS NULL THEN 'En curso'
+                    ELSE 'Presente'
+                END AS Estado
+            FROM Practicante p
+            INNER JOIN SolicitudPracticas sp ON p.PracticanteID = sp.PracticanteID
+            INNER JOIN Area ar ON sp.AreaID = ar.AreaID
+            LEFT JOIN Asistencia a ON p.PracticanteID = a.PracticanteID AND a.Fecha = :fecha
+            LEFT JOIN Turno t ON a.TurnoID = t.TurnoID
+            INNER JOIN Estado eP ON p.EstadoID = eP.EstadoID
+            INNER JOIN Estado eS ON sp.EstadoID = eS.EstadoID
+            WHERE 
+                ar.AreaID = :areaID
+                AND eP.Abreviatura = 'VIG'
+                AND eS.Abreviatura = 'APR'
+            ORDER BY p.Nombres, p.ApellidoPaterno, p.ApellidoMaterno
+        ";
 
-            $sql = "
-                SELECT 
-                    p.PracticanteID,
-                    CONCAT(p.Nombres, ' ', p.ApellidoPaterno, ' ', p.ApellidoMaterno) AS NombreCompleto,
-                    p.FechaEntrada AS FechaInicioPracticas,
-                    a.AsistenciaID,
-                    a.Fecha,
-                    a.HoraEntrada,
-                    a.HoraSalida,
-                    a.TurnoID,
-                    t.Descripcion AS Turno,
-                    CASE 
-                        WHEN a.AsistenciaID IS NULL THEN 'Sin registro'
-                        WHEN a.HoraEntrada IS NULL THEN 'Ausente'
-                        WHEN a.HoraSalida IS NULL THEN 'En curso'
-                        ELSE 'Presente'
-                    END AS Estado
-                FROM Practicante p
-                INNER JOIN SolicitudPracticas sp
-                    ON p.PracticanteID = sp.PracticanteID
-                INNER JOIN Area ar
-                    ON sp.AreaID = ar.AreaID
-                LEFT JOIN Asistencia a
-                    ON p.PracticanteID = a.PracticanteID 
-                    AND a.Fecha = ?
-                LEFT JOIN Turno t 
-                    ON a.TurnoID = t.TurnoID
-                INNER JOIN Estado eP
-                    ON p.EstadoID = eP.EstadoID
-                INNER JOIN Estado eS
-                    ON sp.EstadoID = eS.EstadoID
-                WHERE 
-                    ar.AreaID = ?
-                    AND eP.Abreviatura = 'VIG'
-                    AND eS.Abreviatura = 'APR'
-                ORDER BY 
-                    p.Nombres, p.ApellidoPaterno, p.ApellidoMaterno;
-            ";
+        $asistencias = $this->executeQuery(
+            $sql,
+            [
+                ':fecha' => $fechaConsulta,
+                ':areaID' => $areaID
+            ],
+            'all'
+        );
 
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$fechaConsulta, $areaID]);
-            $asistencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // Agregar pausas a cada asistencia
-            foreach ($asistencias as &$asistencia) {
-                // Agregar la fecha consultada si no existe (para registros sin asistencia)
-                if (!$asistencia['Fecha']) {
-                    $asistencia['Fecha'] = $fechaConsulta;
-                }
-
-                if ($asistencia['AsistenciaID']) {
-                    $asistencia['Pausas'] = $this->obtenerPausas($asistencia['AsistenciaID']);
-
-                    // Calcular tiempo total de pausas
-                    $tiempoPausas = 0;
-                    foreach ($asistencia['Pausas'] as $pausa) {
-                        if ($pausa['HoraFin']) {
-                            $inicio = new \DateTime($pausa['HoraInicio']);
-                            $fin = new \DateTime($pausa['HoraFin']);
-                            $tiempoPausas += $fin->getTimestamp() - $inicio->getTimestamp();
-                        }
-                    }
-                    $asistencia['TiempoPausas'] = $tiempoPausas;
-                } else {
-                    $asistencia['Pausas'] = [];
-                    $asistencia['TiempoPausas'] = 0;
-                }
+        // Agregar pausas y calcular tiempos
+        foreach ($asistencias as &$asistencia) {
+            if (!$asistencia['Fecha']) {
+                $asistencia['Fecha'] = $fechaConsulta;
             }
-            unset($asistencia); // Romper la referencia
 
-            error_log("===> Resultado obtenido: " . count($asistencias) . " registros para fecha: $fechaConsulta");
-
-            return [
-                'success' => true,
-                'data' => $asistencias  // Ahora sí retorna el array modificado
-            ];
-        } catch (\Throwable $e) {
-            error_log("❌ Error en Repository obtenerAsistenciasPorArea: " . $e->getMessage());
-            throw $e;
+            if ($asistencia['AsistenciaID']) {
+                $asistencia['Pausas'] = $this->obtenerPausas($asistencia['AsistenciaID']);
+                $asistencia['TiempoPausas'] = $this->calcularTiempoPausas($asistencia['Pausas']);
+            } else {
+                $asistencia['Pausas'] = [];
+                $asistencia['TiempoPausas'] = 0;
+            }
         }
+        unset($asistencia);
+
+        return [
+            'success' => true,
+            'data' => $asistencias
+        ];
     }
+
     /**
-     * Obtener asistencia completa de un practicante para una fecha específica
+     * Obtener asistencia completa de un practicante
      */
     public function obtenerAsistenciaCompleta($practicanteID, $fecha)
     {
-        try {
-            $sql = "
-                SELECT 
-                    a.AsistenciaID,
-                    a.PracticanteID,
-                    a.Fecha,
-                    a.HoraEntrada,
-                    a.HoraSalida,
-                    a.TurnoID,
-                    t.Descripcion AS Turno
-                FROM Asistencia a
-                LEFT JOIN Turno t ON a.TurnoID = t.TurnoID
-                WHERE a.PracticanteID = ? AND a.Fecha = ?
-                ORDER BY a.HoraEntrada DESC
-            ";
+        $sql = "
+            SELECT 
+                a.AsistenciaID,
+                a.PracticanteID,
+                a.Fecha,
+                a.HoraEntrada,
+                a.HoraSalida,
+                a.TurnoID,
+                t.Descripcion AS Turno
+            FROM Asistencia a
+            LEFT JOIN Turno t ON a.TurnoID = t.TurnoID
+            WHERE a.PracticanteID = :practicanteID AND a.Fecha = :fecha
+            ORDER BY a.HoraEntrada DESC
+        ";
 
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$practicanteID, $fecha]);
-            $asistencia = $stmt->fetch(PDO::FETCH_ASSOC);
+        $asistencia = $this->executeQuery(
+            $sql,
+            [
+                ':practicanteID' => $practicanteID,
+                ':fecha' => $fecha
+            ],
+            'one'
+        );
 
-            if (!$asistencia) {
-                return null;
-            }
-
-            // Obtener pausas de esta asistencia
-            $asistencia['Pausas'] = $this->obtenerPausas($asistencia['AsistenciaID']);
-
-            // Calcular tiempo total de pausas
-            $tiempoPausas = 0;
-            foreach ($asistencia['Pausas'] as $pausa) {
-                if ($pausa['HoraFin']) {
-                    $inicio = new \DateTime($pausa['HoraInicio']);
-                    $fin = new \DateTime($pausa['HoraFin']);
-                    $tiempoPausas += $fin->getTimestamp() - $inicio->getTimestamp();
-                }
-            }
-            $asistencia['TiempoPausas'] = $tiempoPausas;
-
-            return $asistencia;
-        } catch (\Throwable $e) {
-            error_log("Error en obtenerAsistenciaCompleta: " . $e->getMessage());
-            throw $e;
+        if (!$asistencia) {
+            return null;
         }
+
+        // Agregar pausas
+        $asistencia['Pausas'] = $this->obtenerPausas($asistencia['AsistenciaID']);
+        $asistencia['TiempoPausas'] = $this->calcularTiempoPausas($asistencia['Pausas']);
+
+        return $asistencia;
     }
 
     /**
      * Obtener fecha de entrada del practicante
-     * @param int $practicanteID ID del practicante
-     * @return string|null Fecha de entrada en formato Y-m-d o null si no existe
      */
     public function obtenerFechaEntradaPracticante($practicanteID)
     {
-        try {
-            $sql = "SELECT FechaEntrada FROM Practicante WHERE PracticanteID = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->execute([$practicanteID]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $result = $this->executeQuery(
+            "SELECT FechaEntrada FROM Practicante WHERE PracticanteID = :practicanteID",
+            [':practicanteID' => $practicanteID],
+            'one'
+        );
 
-            return $result ? $result['FechaEntrada'] : null;
-        } catch (\Throwable $e) {
-            error_log("Error en obtenerFechaEntradaPracticante: " . $e->getMessage());
-            throw $e;
+        return $result['FechaEntrada'] ?? null;
+    }
+
+    /**
+     * Calcular tiempo total de pausas en segundos
+     */
+    private function calcularTiempoPausas(array $pausas)
+    {
+        $tiempoTotal = 0;
+        
+        foreach ($pausas as $pausa) {
+            if ($pausa['HoraFin']) {
+                $inicio = new \DateTime($pausa['HoraInicio']);
+                $fin = new \DateTime($pausa['HoraFin']);
+                $tiempoTotal += $fin->getTimestamp() - $inicio->getTimestamp();
+            }
         }
+        
+        return $tiempoTotal;
     }
 }

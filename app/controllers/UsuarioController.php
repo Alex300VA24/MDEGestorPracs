@@ -1,345 +1,270 @@
 <?php
 namespace App\Controllers;
 
-use App\Controllers\BaseController;
 use App\Services\UsuarioService;
 use App\Security\RateLimiter;
 use App\Security\Authorization;
 use Exception;
 
 class UsuarioController extends BaseController {
+    
     private $service;
-
+    
     public function __construct($service = null) {
         $this->service = $service ?? new UsuarioService();
     }
-
-    // Metodo UsuarioController:login
+    
+    /**
+     * Login de usuario - Solo valida credenciales y retorna usuarioID
+     * NO autentica completamente hasta validar CUI
+     */
     public function login() {
-        try {
+        $this->executeServiceAction(function() {
             $this->validateMethod('POST');
             
-            $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+            $ip = $this->getClientIP();
             
-            // Rate limiting para login (5 intentos por 10 minutos)
+            // Rate limiting para login
             try {
                 RateLimiter::checkLimit($ip . '_login', RateLimiter::LOGIN_LIMIT, RateLimiter::LOGIN_WINDOW);
             } catch (Exception $e) {
-                $this->handleException($e, 'Demasiados intentos de login. Por favor, intente nuevamente más tarde.');
+                throw new Exception('Demasiados intentos de login. Por favor, intente nuevamente más tarde.');
             }
             
             $request = $this->getJsonInput();
+            $this->validateRequired($request, ['nombreUsuario', 'password']);
             
-            $nombreUsuario = $request['nombreUsuario'] ?? '';
-            $password = $request['password'] ?? '';
-            
-            $response = $this->service->login($nombreUsuario, $password);
-            error_log("Este es response" . print_r($response, true));
-            
-            // Iniciar sesión de forma segura
-            $_SESSION['authenticated'] = true;
-            $_SESSION['usuarioID'] = $response->getUsuarioID();
-            $_SESSION['nombreUsuario'] = $response->getNombreUsuario();
-            $_SESSION['nombreCargo'] = $response->getCargo()->getNombreCargo();
-            $_SESSION['nombreArea'] = $response->getArea()->getNombreArea();
-            $_SESSION['cargoID'] = $response->getCargo()->getCargoID();
-            $_SESSION['userRole'] = $this->mapCargoToRole($response->getCargo()->getCargoID());
-            $_SESSION['requireCUI'] = true;
-            $_SESSION['login_time'] = time();
-            $_SESSION['ip'] = $ip;
-            
-            // Reset rate limiting para esta IP
-            RateLimiter::reset($ip . '_login');
-            
-            
-            $this->successResponse('Login exitoso', [
-                'usuarioID' => $response->getUsuarioID(),
-                'nombreUsuario' => $response->getNombreUsuario(),
-                'nombreCompleto' => $response->getNombreCompleto(),
-                'cargo' => $response->getCargo()->toArray(),
-                'area' => $response->getArea()->toArray(),
-                'requireCUI' => true
-            ]);
-            
-        } catch (Exception $e) {
-            $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-            // Registrar intento fallido
-            RateLimiter::recordAttempt($ip . '_login', RateLimiter::LOGIN_WINDOW);
-            
-            $this->handleException($e, 'Error en el proceso de login');
-        }
+            try {
+                $response = $this->service->login($request['nombreUsuario'], $request['password']);
+                
+                // Reset rate limiting en login exitoso
+                RateLimiter::reset($ip . '_login');
+                
+                // Solo retornar el usuarioID para el siguiente paso (validar CUI)
+                return [
+                    'message' => 'Credenciales válidas. Por favor, ingrese su CUI.',
+                    'data' => [
+                        'usuarioID' => $response->getUsuarioID(),
+                        'requireCUI' => true
+                    ]
+                ];
+            } catch (Exception $e) {
+                // Registrar intento fallido
+                RateLimiter::recordAttempt($ip . '_login', RateLimiter::LOGIN_WINDOW);
+                throw $e;
+            }
+        });
     }
-
-    // Metodo UsuarioController:validarCUI
+    
+    /**
+     * Validar CUI del usuario - AQUÍ se autentica completamente
+     */
     public function validarCUI() {
-        try {
+        $this->executeServiceAction(function() {
             $this->validateMethod('POST');
             
-            if (!isset($_SESSION['usuarioID'])) {
-                throw new Exception("Sesión no iniciada");
-            }
-
             $request = $this->getJsonInput();
+            error_log("El request recibido en validarCUI: " . print_r($request, true));
+            $this->validateRequired($request, ['id', 'cui']);
             
-            $usuarioID = $_SESSION['usuarioID'];
-            $cui = $request['cui'] ?? '';
-            $response = $this->service->validarCUI($usuarioID, $cui);
-        
-            // Actualizar sesión
-            $_SESSION['authenticated'] = true;
-            $_SESSION['requireCUI'] = false;
-            $_SESSION['usuario'] = $response->toArray();
+            $ip = $this->getClientIP();
             
-
-            $this->successResponse('CUI validado correctamente', [
-                'usuario' => $response->toArray()
-            ]);
+            // Validar CUI con el servicio
+            $response = $this->service->validarCUI($request['id'], $request['cui']);
+            // AHORA SÍ establecer la sesión completa
+            $this->setUserSession($response, $ip);
             
-        } catch (Exception $e) {
-            $this->errorResponse('Error al validar CUI: ' . $e->getMessage(), 400);
-        }
+            return [
+                'message' => 'Autenticación exitosa',
+                'data' => [
+                    'usuarioID' => $response->getUsuarioID(),
+                    'nombreUsuario' => $response->getNombreUsuario(),
+                    'nombreCompleto' => $response->getNombreCompleto(),
+                    'cargo' => $response->getCargo()->toArray(),
+                    'area' => $response->getArea()->toArray()
+                ]
+            ];
+        });
     }
-
-    // Metodo UsuarioController:logout()
+    
+    /**
+     * Cerrar sesión
+     */
     public function logout() {
-        try {
-
-            // Destruir sesión de forma segura
-            $_SESSION = [];
+        $this->executeServiceAction(function() {
+            $this->destroySession();
             
-            if (ini_get("session.use_cookies")) {
-                $params = session_get_cookie_params();
-                setcookie(session_name(), '', time() - 42000,
-                    $params["path"], $params["domain"],
-                    $params["secure"], $params["httponly"]
-                );
-            }
-            
-            session_destroy();
-            
-            $this->successResponse('Logout exitoso');
-        } catch (Exception $e) {
-            $this->handleException($e, 'Error en el proceso de logout');
-        }
+            return [
+                'message' => 'Logout exitoso'
+            ];
+        });
     }
-
-    //Listar todos los usuarios
+    
+    /**
+     * Listar todos los usuarios
+     */
     public function listar() {
-        try {
-            $response = $this->service->listarTodos();
-            $this->successResponse('Usuarios obtenidos exitosamente', ['usuarios' => $response]);
-        } catch (Exception $e) {
-
-            $this->handleException($e, 'Error al listar usuarios');
-        }
+        $this->executeServiceAction(function() {
+            $this->validateMethod('GET');
+            $this->requireAuth();
+            
+            $usuarios = $this->service->listarTodos();
+            
+            return [
+                'message' => 'Usuarios obtenidos exitosamente',
+                'data' => $usuarios
+            ];
+        });
     }
-
-    // Obtener un usuario específico
+    
+    /**
+     * Obtener usuario por ID
+     */
     public function obtener($usuarioID) {
-        try {
+        $this->executeServiceAction(function() use ($usuarioID) {
+            $this->validateMethod('GET');
+            $this->requireAuth();
+            
             $usuario = $this->service->obtenerPorID($usuarioID);
             
             if (!$usuario) {
-                $this->errorResponse('Usuario no encontrado', 404);
-                return;
+                throw new Exception('Usuario no encontrado');
             }
-
-            $this->successResponse('Usuario obtenido exitosamente', ['usuario' => $usuario]);
-        } catch (Exception $e) {
-
-            $this->handleException($e, 'Error al obtener usuario');
-        }
+            
+            return [
+                'message' => 'Usuario obtenido exitosamente',
+                'data' => $usuario
+            ];
+        });
     }
-
-    // Crear nuevo usuario
+    
+    /**
+     * Crear nuevo usuario
+     */
     public function crear() {
-        try {
+        $this->executeServiceAction(function() {
+            $this->validateMethod('POST');
+            $this->requireAuth();
+            
             $request = $this->getJsonInput();
+            $request = $this->sanitizeData($request);
             
-            // Validaciones
-            $errores = $this->validarDatosUsuario($request, false);
-            if (!empty($errores)) {
-                $this->errorResponse(implode(', ', $errores), 400);
-                return;
-            }
-            
-            // Verificar si el usuario ya existe
-            if ($this->service->existeNombreUsuario($request['nombreUsuario'])) {
-                $this->errorResponse('El nombre de usuario ya está en uso', 400);
-                return;
-            }
-            
-            // Verificar si el DNI ya existe
-            if ($this->service->existeDNI($request['dni'])) {
-                $this->errorResponse('El DNI ya está registrado', 400);
-                return;
-            }
-
             $usuarioID = $this->service->crear($request);
             
-            $this->successResponse('Usuario creado exitosamente', ['usuarioID' => $usuarioID]);
-        } catch (Exception $e) {
-
-            $this->handleException($e, 'Error al crear usuario');
-        }
+            return [
+                'message' => 'Usuario creado exitosamente',
+                'data' => $usuarioID,
+                'statusCode' => 201
+            ];
+        });
     }
-
+    
     /**
      * Actualizar usuario
      */
     public function actualizar($usuarioID) {
-        try {
+        $this->executeServiceAction(function() use ($usuarioID) {
+            $this->validateMethod('PUT');
+            $this->requireAuth();
+            
             $request = $this->getJsonInput();
-            $request['usuarioID'] = $usuarioID;
-            
-            // Validaciones (sin requerir password)
-            $errores = $this->validarDatosUsuario($request, true);
-            if (!empty($errores)) {
-                $this->errorResponse(implode(', ', $errores), 400);
-                return;
-            }
-            
-            // Verificar si el usuario existe
-            if (!$this->service->obtenerPorID($usuarioID)) {
-                $this->errorResponse('Usuario no encontrado', 404);
-                return;
-            }
-            
-            // Verificar nombre de usuario único (excepto el actual)
-            if ($this->service->existeNombreUsuarioExcepto($request['nombreUsuario'], $usuarioID)) {
-                $this->errorResponse('El nombre de usuario ya está en uso', 400);
-                return;
-            }
+            $request = $this->sanitizeData($request);
             
             $this->service->actualizar($usuarioID, $request);
             
-            $this->successResponse('Usuario actualizado exitosamente');
-        } catch (Exception $e) {
-
-            $this->handleException($e, 'Error al actualizar usuario');
-        }
+            return [
+                'message' => 'Usuario actualizado exitosamente'
+            ];
+        });
     }
-
-
-    // Eliminar usuario
+    
+    /**
+     * Eliminar usuario
+     */
     public function eliminar($usuarioID) {
-        try {
-            // Verificar si el usuario existe
+        $this->executeServiceAction(function() use ($usuarioID) {
+            $this->validateMethod('DELETE');
+            $this->requireAuth();
+            
+            // Verificar existencia
             if (!$this->service->obtenerPorID($usuarioID)) {
-                $this->errorResponse('Usuario no encontrado', 404);
-                return;
+                throw new Exception('Usuario no encontrado');
             }
             
             // No permitir eliminar el usuario actual
-            if (isset($_SESSION['usuario_id']) && $_SESSION['usuario_id'] == $usuarioID) {
-                $this->errorResponse('No puede eliminar su propio usuario', 400);
-                return;
+            $currentUser = $this->getCurrentUser();
+            if ($currentUser['usuarioID'] == $usuarioID) {
+                throw new Exception('No puede eliminar su propio usuario');
             }
-
+            
             $this->service->eliminar($usuarioID);
             
-            $this->successResponse('Usuario eliminado exitosamente');
-        } catch (Exception $e) {
-
-            $this->handleException($e, 'Error al eliminar usuario');
-        }
+            return [
+                'message' => 'Usuario eliminado exitosamente'
+            ];
+        });
     }
-
-    // Cambiar contraseña
+    
+    /**
+     * Cambiar contraseña
+     */
     public function cambiarPassword($usuarioID) {
-        try {
+        $this->executeServiceAction(function() use ($usuarioID) {
+            $this->validateMethod('PUT');
+            $this->requireAuth();
+            
             $request = $this->getJsonInput();
+            $this->validateRequired($request, ['password']);
             
-            if (!isset($request['password']) || empty($request['password'])) {
-                $this->errorResponse('La nueva contraseña es requerida', 400);
-                return;
-            }
-
-            if (strlen($request['password']) < 8) {
-                $this->errorResponse('La contraseña debe tener al menos 8 caracteres', 400);
-                return;
-            }
-            
-            // Verificar si el usuario existe
+            // Verificar existencia
             if (!$this->service->obtenerPorID($usuarioID)) {
-                $this->errorResponse('Usuario no encontrado', 404);
-                return;
+                throw new Exception('Usuario no encontrado');
             }
             
             $this->service->cambiarPassword($usuarioID, $request['password']);
-
-            $this->successResponse('Contraseña actualizada exitosamente');
-        } catch (Exception $e) {
-
-            $this->handleException($e, 'Error al cambiar contraseña');
-        }
+            
+            return [
+                'message' => 'Contraseña actualizada exitosamente'
+            ];
+        });
     }
-
+    
     /**
      * Filtrar usuarios
      */
     public function filtrar() {
-        try {
-            $request = $this->getJsonInput();
+        $this->executeServiceAction(function() {
+            $this->validateMethods(['GET', 'POST']);
+            $this->requireAuth();
+            
+            $request = $_SERVER['REQUEST_METHOD'] === 'GET' 
+                ? $_GET 
+                : $this->getJsonInput();
+            
             $usuarios = $this->service->filtrar($request);
-            $this->successResponse('Usuarios filtrados exitosamente', ['usuarios' => $usuarios]);
-        } catch (Exception $e) {
-
-            $this->handleException($e, 'Error al filtrar usuarios');
-        }
+            
+            return [
+                'message' => 'Usuarios filtrados exitosamente',
+                'data' => ['usuarios' => $usuarios]
+            ];
+        });
     }
-
+    
     /**
-     * Validar datos de usuario
+     * Establecer datos de sesión del usuario (llamado SOLO después de validar CUI)
      */
-    private function validarDatosUsuario($data, $esActualizacion = false) {
-        $errores = [];
-        
-        // Validar nombre de usuario
-        if (empty($data['nombreUsuario'])) {
-            $errores[] = 'El nombre de usuario es requerido';
-        } elseif (!preg_match('/^[a-z0-9]+$/', $data['nombreUsuario'])) {
-            $errores[] = 'El nombre de usuario solo puede contener letras minúsculas y números';
-        }
-        
-        // Validar contraseña (solo requerida en creación)
-        if (!$esActualizacion) {
-            if (empty($data['password'])) {
-                $errores[] = 'La contraseña es requerida';
-            } elseif (strlen($data['password']) < 8) {
-                $errores[] = 'La contraseña debe tener al menos 8 caracteres';
-            }
-        }
-        
-        // Validar nombres
-        if (empty($data['nombres'])) {
-            $errores[] = 'Los nombres son requeridos';
-        }
-        if (empty($data['apellidoPaterno'])) {
-            $errores[] = 'El apellido paterno es requerido';
-        }
-        if (empty($data['apellidoMaterno'])) {
-            $errores[] = 'El apellido materno es requerido';
-        }
-        
-        // Validar DNI
-        if (empty($data['dni'])) {
-            $errores[] = 'El DNI es requerido';
-        } elseif (!preg_match('/^\d{9}$/', $data['dni'])) {
-            $errores[] = 'El DNI debe tener 9 dígitos';
-        }
-        
-        // Validar cargo
-        if (empty($data['cargo'])) {
-            $errores[] = 'El cargo es requerido';
-        }
-        
-        // Validar área
-        if (empty($data['areaID'])) {
-            $errores[] = 'El área es requerida';
-        }
-        
-        return $errores;
+    private function setUserSession($usuario, $ip) {
+        $_SESSION['authenticated'] = true;
+        $_SESSION['usuarioID'] = $usuario->getUsuarioID();
+        $_SESSION['nombreUsuario'] = $usuario->getNombreUsuario();
+        $_SESSION['nombreCargo'] = $usuario->getCargo()->getNombreCargo();
+        $_SESSION['nombreArea'] = $usuario->getArea()->getNombreArea();
+        $_SESSION['cargoID'] = $usuario->getCargo()->getCargoID();
+        $_SESSION['userRole'] = $this->mapCargoToRole($usuario->getCargo()->getCargoID());
+        $_SESSION['requireCUI'] = false; // Ya validado
+        $_SESSION['login_time'] = time();
+        $_SESSION['ip'] = $ip;
+        $_SESSION['usuario'] = $usuario->toArray();
     }
     
     /**
@@ -347,14 +272,12 @@ class UsuarioController extends BaseController {
      */
     private function mapCargoToRole($cargoID) {
         $roleMap = [
-            1 => Authorization::ROLE_ADMIN,              // Gerente RRHH
-            2 => Authorization::ROLE_COORDINATOR,       // Gerente Área
-            3 => Authorization::ROLE_SUPERVISOR,        // Usuario Área
-            4 => Authorization::ROLE_ADMIN              // Gerente Sistemas
+            1 => Authorization::ROLE_ADMIN,         // Gerente RRHH
+            2 => Authorization::ROLE_COORDINATOR,   // Gerente Área
+            3 => Authorization::ROLE_SUPERVISOR,    // Usuario Área
+            4 => Authorization::ROLE_ADMIN          // Gerente Sistemas
         ];
         
         return $roleMap[$cargoID] ?? Authorization::ROLE_GUEST;
     }
-
 }
-
