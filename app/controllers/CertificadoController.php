@@ -3,101 +3,118 @@ namespace App\Controllers;
 
 use App\Services\CertificadoService;
 
-class CertificadoController {
+class CertificadoController extends BaseController {
     private $service;
     
-    public function __construct() {
-        $this->service = new CertificadoService();
+    public function __construct($service = null) {
+        $this->service = $service ?? new CertificadoService();
     }
 
+    /**
+     * Obtener estadísticas de certificados
+     */
     public function obtenerEstadisticas() {
         try {
-            $data = $this->service->obtenerEstadisticas();
+            $this->validateMethod('GET');
             
-            http_response_code(200);
-            echo json_encode([
-                'success' => true,
-                'totalVigentes' => $data['totalVigentes'],
-                'totalFinalizados' => $data['totalFinalizados']
-            ]);
+            $this->executeServiceAction(function() {
+                return $this->service->obtenerEstadisticas();
+            });
         } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Error al obtener estadísticas: ' . $e->getMessage()
-            ]);
+            error_log("Error en obtenerEstadisticas: " . $e->getMessage());
+            $this->errorResponse($e->getMessage(), 500);
         }
     }
 
+    /**
+     * Listar practicantes elegibles para certificado
+     */
     public function listarPracticantesParaCertificado() {
         try {
-            $practicantes = $this->service->listarPracticantesParaCertificado();
+            $this->validateMethod('GET');
             
-            http_response_code(200);
-            echo json_encode([
-                'success' => true,
-                'practicantes' => $practicantes
-            ]);
+            $this->executeServiceAction(function() {
+                return $this->service->listarPracticantesParaCertificado();
+            });
         } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Error al listar practicantes: ' . $e->getMessage()
-            ]);
+            error_log("Error en listarPracticantesParaCertificado: " . $e->getMessage());
+            $this->errorResponse($e->getMessage(), 500);
         }
     }
 
+    /**
+     * Obtener información completa para certificado
+     */
     public function obtenerInformacionCertificado($practicanteID) {
         try {
-            $info = $this->service->obtenerInformacionCompleta($practicanteID);
+            $this->validateMethod('GET');
             
-            if (!$info) {
-                http_response_code(404);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Practicante no encontrado'
-                ]);
-                return;
+            if (!$practicanteID) {
+                throw new \Exception('Se requiere el ID del practicante');
             }
-
-            http_response_code(200);
-            echo json_encode(array_merge(['success' => true], $info));
+            
+            $this->executeServiceAction(function() use ($practicanteID) {
+                return $this->service->obtenerInformacionCompleta($practicanteID);
+            });
         } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Error al obtener información: ' . $e->getMessage()
-            ]);
+            error_log("Error en obtenerInformacionCertificado: " . $e->getMessage());
+            $this->errorResponse($e->getMessage(), 500);
         }
     }
 
+    /**
+     * Generar certificado en PDF o Word
+     */
     public function generarCertificado() {
         try {
-            $input = json_decode(file_get_contents('php://input'), true);
+            $this->validateMethod('POST');
             
-            if (!isset($input['practicanteID']) || !isset($input['numeroExpediente']) || !isset($input['formato'])) {
-                http_response_code(400);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Datos incompletos'
-                ]);
-                return;
-            }
-
+            $input = $this->getValidatedInput(['practicanteID', 'numeroExpediente', 'formato']);
+            
+            // Validar formato
+            $this->validateInList(
+                $input['formato'], 
+                ['pdf', 'word'], 
+                'Formato'
+            );
+            
             $resultado = $this->service->generarCertificado(
                 $input['practicanteID'],
                 $input['numeroExpediente'],
                 $input['formato']
             );
-
-            http_response_code(200);
-            echo json_encode($resultado);
+            
+            $this->successResponse($resultado, $resultado['message'] ?? 'Certificado generado exitosamente');
         } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Error al generar certificado: ' . $e->getMessage()
-            ]);
+            error_log("Error en generarCertificado: " . $e->getMessage());
+            $this->errorResponse($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Obtener historial de certificados generados
+     */
+    public function obtenerHistorialCertificados() {
+        try {
+            $this->validateMethod('GET');
+            
+            $practicanteID = $_GET['practicanteID'] ?? null;
+            
+            $this->executeServiceAction(function() use ($practicanteID) {
+                return $this->service->obtenerHistorialCertificados($practicanteID);
+            });
+        } catch (\Exception $e) {
+            error_log("Error en obtenerHistorialCertificados: " . $e->getMessage());
+            $this->errorResponse($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * Validar lista de valores permitidos
+     */
+    private function validateInList($value, array $allowedValues, $fieldName = 'Valor') {
+        if (!in_array($value, $allowedValues, true)) {
+            throw new \Exception("$fieldName debe ser uno de: " . implode(', ', $allowedValues));
         }
     }
 }

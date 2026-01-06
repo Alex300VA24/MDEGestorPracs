@@ -102,18 +102,18 @@ window.initDocumentos = function() {
                 const ultimaSolicitud = historialResponse.data[0];
                 mensaje = `Este practicante no tiene una solicitud activa, pero tiene solicitudes anteriores.
 
-<div style="background: #f0f7ff; padding: 10px; border-radius: 5px; margin: 10px 0;">
-    <strong>Última solicitud:</strong> #${ultimaSolicitud.SolicitudID} (${ultimaSolicitud.EstadoDesc})
-</div>
+                <div style="background: #f0f7ff; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                    <strong>Última solicitud:</strong> #${ultimaSolicitud.SolicitudID} (${ultimaSolicitud.EstadoDesc})
+                </div>
 
-¿Desea crear una nueva solicitud y <strong>transferir los documentos</strong> de la solicitud anterior?
+                ¿Desea crear una nueva solicitud y <strong>transferir los documentos</strong> de la solicitud anterior?
 
-<div style="color: #666; font-size: 0.9em; margin-top: 10px;">
-    ℹ️ Los documentos se moverán automáticamente a la nueva solicitud para evitar duplicados.
-</div>`;
+                <div style="color: #666; font-size: 0.9em; margin-top: 10px;">
+                    ℹ️ Los documentos se moverán automáticamente a la nueva solicitud para evitar duplicados.
+                </div>`;
                 textoConfirm = 'Sí, crear y transferir documentos';
             }
-            
+
             const confirmacion = await mostrarAlerta({
                 tipo: 'question',
                 titulo: 'Crear Nueva Solicitud',
@@ -318,8 +318,20 @@ window.initDocumentos = function() {
                             }
 
                             if (!response.ok) {
-                                throw new Error(`Error al subir ${tipo}`);
+                                let errorMsg = `Error al subir el documento ${tipo}`;
+
+                                try {
+                                    const errorData = await response.json();
+                                    errorMsg = errorData.message || errorData.error || errorMsg;
+                                } catch (e) {
+                                    // El body no era JSON
+                                    const text = await response.text();
+                                    if (text) errorMsg = text;
+                                }
+
+                                throw new Error(errorMsg);
                             }
+
                             
                             documentosSubidos++;
                         }
@@ -346,7 +358,7 @@ window.initDocumentos = function() {
                 closeModal("modalSubirDocumento");
 
             } catch (err) {
-                mostrarAlerta({tipo:'error', titulo:'Error', mensaje: "Error al guardar los documentos: " + err.message});
+                mostrarAlerta({tipo:'error', titulo:'Error', mensaje: err.message});
             }
         });
 
@@ -495,12 +507,15 @@ window.initDocumentos = function() {
 
     // 🔹 Ver documento
     window.verDocumento = function(base64) {
+        console.log('Visualizando documento...');
+        console.log('Base64 recibido:', base64.substring(0, 30) + '...');
         const tipoMime = base64.startsWith("JVBER") ? "application/pdf"
                         : base64.startsWith("/9j/") ? "image/jpeg"
                         : base64.startsWith("iVBOR") ? "image/png"
                         : "application/octet-stream";
         
         const blob = b64toBlob(base64, tipoMime);
+        console.log('Blob creado:', blob);
         const url = URL.createObjectURL(blob);
         window.open(url, "_blank");
     };
@@ -544,13 +559,14 @@ window.initDocumentos = function() {
         if (!(await mostrarAlerta({
             tipo: 'warning',
             titulo: '¿Estás seguro?',
-            mensaje: "¿Seguro que deseas eliminar este documenti?",
+            mensaje: "¿Seguro que deseas eliminar este documento?",
             showCancelButton: true
         })).isConfirmed) {
             return; // CANCELADO → salir sin continuar
         }
         
         try {
+            console.log('Eliminando documento ID:', documentoID);
             const response = await api.eliminarDocumento(documentoID);
             
             if (response.success) {
@@ -771,143 +787,143 @@ window.initDocumentos = function() {
     }
 
     async function renderDocumentos(documentos, solicitudID, forzarEnviada = false) {
-    const contenedor = document.getElementById("listaDocumentos");
+        const contenedor = document.getElementById("listaDocumentos");
+        console.log('🚨 SE EJECUTA renderDocumentos', { documentos, solicitudID, forzarEnviada });
+        // 🔑 FILTRAR documentos por solicitud actual
+        if (documentos && Array.isArray(documentos) && solicitudID) {
+            const totalOriginal = documentos.length;
+            
+            documentos = documentos.filter(doc => {
+                const perteneceASolicitud = doc.solicitudID === solicitudID || 
+                                        doc.SolicitudID === solicitudID;
+                return perteneceASolicitud;
+            });
+            
+            console.log(`📋 Documentos filtrados: ${documentos.length} de ${totalOriginal} (solicitud #${solicitudID})`);
+        }
 
-    // 🔑 FILTRAR documentos por solicitud actual
-    if (documentos && Array.isArray(documentos) && solicitudID) {
-        const totalOriginal = documentos.length;
-        
-        documentos = documentos.filter(doc => {
-            const perteneceASolicitud = doc.solicitudID === solicitudID || 
-                                       doc.SolicitudID === solicitudID;
-            return perteneceASolicitud;
-        });
-        
-        console.log(`📋 Documentos filtrados: ${documentos.length} de ${totalOriginal} (solicitud #${solicitudID})`);
-    }
+        if (!documentos || !Array.isArray(documentos) || documentos.length === 0) {
+            const practicanteID = document.getElementById('selectPracticanteDoc')?.value;
+            contenedor.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <p style="color: #666;">No hay documentos registrados para esta solicitud.</p>
+                    ${practicanteID ? `
+                        <button class="btn-info" onclick="mostrarHistorialSolicitudes(${practicanteID})" style="margin-top: 10px;">
+                            <i class="fas fa-history"></i> Ver Historial de Solicitudes
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+            return;
+        }
 
-    if (!documentos || !Array.isArray(documentos) || documentos.length === 0) {
+        const obligatorios = ["CV", "DNI", "Carnet_Vacunacion"];
+        const normalizar = str =>
+            str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        const tiposSubidos = documentos.map(doc => normalizar(doc.tipo));
+        const faltantes = obligatorios.filter(req =>
+            !tiposSubidos.includes(normalizar(req))
+        );
+        const todosCompletos = faltantes.length === 0;
+
+        let solicitudEnviada = forzarEnviada;
+        let solicitudAprobada = false;
+        let solicitudRechazada = false;
+        
+        if (solicitudID) {
+            try {
+                const estadoResponse = await api.verificarEstadoSolicitud(solicitudID);
+                if (estadoResponse.success && estadoResponse.data) {
+                    solicitudEnviada = estadoResponse.data.enviada === true || forzarEnviada;
+                    solicitudAprobada = estadoResponse.data.aprobada;
+                    solicitudRechazada = estadoResponse.data.estado && 
+                                        estadoResponse.data.estado.descripcion === 'Negada';
+                }
+            } catch (error) {
+                console.warn("No se pudo verificar estado de solicitud:", error);
+            }
+        }
+
         const practicanteID = document.getElementById('selectPracticanteDoc')?.value;
-        contenedor.innerHTML = `
-            <div style="text-align: center; padding: 20px;">
-                <p style="color: #666;">No hay documentos registrados para esta solicitud.</p>
+        
+        const tabla = `
+        <div class="table-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h4 style="margin: 0;">Documentos de Solicitud #${solicitudID || 'N/A'}</h4>
                 ${practicanteID ? `
-                    <button class="btn-info" onclick="mostrarHistorialSolicitudes(${practicanteID})" style="margin-top: 10px;">
-                        <i class="fas fa-history"></i> Ver Historial de Solicitudes
+                    <button class="btn-info" onclick="mostrarHistorialSolicitudes(${practicanteID})" style="padding: 8px 15px;">
+                        <i class="fas fa-history"></i> Ver Historial
                     </button>
                 ` : ''}
             </div>
-        `;
-        return;
-    }
+            
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Importancia</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${documentos.map(doc => {
+                        const obligatorio = obligatorios.some(req =>
+                            normalizar(req) === normalizar(doc.tipo)
+                        );
 
-    const obligatorios = ["CV", "DNI", "Carnet_Vacunacion"];
-    const normalizar = str =>
-        str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        return `
+                            <tr>
+                                <td>${doc.tipo}</td>
+                                <td style="color: ${obligatorio ? '#FF664A' : '#7575FA'}; font-weight: bold;">
+                                    ${obligatorio ? 'Obligatorio' : 'Opcional'}
+                                </td>
+                                <td>
+                                    <button class="btn-view" 
+                                            onclick="verDocumento('${doc.archivo}')">
+                                        <i class="fas fa-eye"></i> Ver
+                                    </button>
+                                    <button class="btn-delete" onclick="eliminarDocumento(${doc.documentoID}, '${normalizar(doc.tipo)}')">
+                                        <i class="fas fa-trash"></i> Eliminar
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join("")}
+                </tbody>
+            </table>
 
-    const tiposSubidos = documentos.map(doc => normalizar(doc.tipo));
-    const faltantes = obligatorios.filter(req =>
-        !tiposSubidos.includes(normalizar(req))
-    );
-    const todosCompletos = faltantes.length === 0;
-
-    let solicitudEnviada = forzarEnviada;
-    let solicitudAprobada = false;
-    let solicitudRechazada = false;
-    
-    if (solicitudID) {
-        try {
-            const estadoResponse = await api.verificarEstadoSolicitud(solicitudID);
-            if (estadoResponse.success && estadoResponse.data) {
-                solicitudEnviada = estadoResponse.data.enviada === true || forzarEnviada;
-                solicitudAprobada = estadoResponse.data.aprobada;
-                solicitudRechazada = estadoResponse.data.estado && 
-                                    estadoResponse.data.estado.descripcion === 'Negada';
-            }
-        } catch (error) {
-            console.warn("No se pudo verificar estado de solicitud:", error);
-        }
-    }
-
-    const practicanteID = document.getElementById('selectPracticanteDoc')?.value;
-    
-    const tabla = `
-    <div class="table-container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h4 style="margin: 0;">Documentos de Solicitud #${solicitudID || 'N/A'}</h4>
-            ${practicanteID ? `
-                <button class="btn-info" onclick="mostrarHistorialSolicitudes(${practicanteID})" style="padding: 8px 15px;">
-                    <i class="fas fa-history"></i> Ver Historial
+            <div class="enviar-solicitud-container" style="margin-top: 20px; text-align: center;">
+                <button id="btnEnviarSolicitudArea" 
+                        class="btn-info" 
+                        ${todosCompletos && (!solicitudEnviada || solicitudRechazada) ? '' : 'disabled'}
+                        onclick="abrirModalEnviarSolicitud(${solicitudID})">
+                    <i class="fas fa-${solicitudEnviada && !solicitudRechazada ? 'check' : 'paper-plane'}"></i> 
+                    ${solicitudEnviada && !solicitudRechazada ? 'Solicitud Enviada' : 'Enviar Solicitud a Área'}
                 </button>
-            ` : ''}
+                <button id="btnGenerarCarta" 
+                        class="btn-success" 
+                        ${solicitudAprobada ? '' : 'disabled'}
+                        style="margin-left: 10px;"
+                        onclick="abrirDialogCarta()">
+                    <i class="fas fa-file-contract"></i> Generar Carta de Aceptación
+                </button>
+                ${
+                    !todosCompletos
+                    ? `<p class='msg-warn'>Faltan documentos obligatorios: ${faltantes.join(", ")}</p>`
+                    : solicitudRechazada
+                    ? "<p class='msg-warn'>Solicitud <strong>RECHAZADA</strong>. Puede crear una nueva solicitud desde el modal de subir documentos.</p>"
+                    : !solicitudEnviada
+                    ? "<p class='msg-ok'>Documentos completos. Ahora puede enviar la solicitud.</p>"
+                    : solicitudAprobada
+                    ? "<p class='msg-ok'>Solicitud <strong>APROBADA</strong>. Puede generar la carta de aceptación.</p>"
+                    : "<p class='msg-info'>Solicitud enviada. Esperando aprobación del área.</p>"
+                }
+            </div>
         </div>
-        
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Tipo</th>
-                    <th>Importancia</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${documentos.map(doc => {
-                    const obligatorio = obligatorios.some(req =>
-                        normalizar(req) === normalizar(doc.tipo)
-                    );
+        `;
 
-                    return `
-                        <tr>
-                            <td>${doc.tipo}</td>
-                            <td style="color: ${obligatorio ? '#FF664A' : '#7575FA'}; font-weight: bold;">
-                                ${obligatorio ? 'Obligatorio' : 'Opcional'}
-                            </td>
-                            <td>
-                                <button class="btn-view" 
-                                        onclick="verDocumento('${doc.archivo}')">
-                                    <i class="fas fa-eye"></i> Ver
-                                </button>
-                                <button class="btn-delete" onclick="eliminarDocumento(${doc.documentoID}, '${normalizar(doc.tipo)}')">
-                                    <i class="fas fa-trash"></i> Eliminar
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join("")}
-            </tbody>
-        </table>
-
-        <div class="enviar-solicitud-container" style="margin-top: 20px; text-align: center;">
-            <button id="btnEnviarSolicitudArea" 
-                    class="btn-info" 
-                    ${todosCompletos && (!solicitudEnviada || solicitudRechazada) ? '' : 'disabled'}
-                    onclick="abrirModalEnviarSolicitud(${solicitudID})">
-                <i class="fas fa-${solicitudEnviada && !solicitudRechazada ? 'check' : 'paper-plane'}"></i> 
-                ${solicitudEnviada && !solicitudRechazada ? 'Solicitud Enviada' : 'Enviar Solicitud a Área'}
-            </button>
-            <button id="btnGenerarCarta" 
-                    class="btn-success" 
-                    ${solicitudAprobada ? '' : 'disabled'}
-                    style="margin-left: 10px;"
-                    onclick="abrirDialogCarta()">
-                <i class="fas fa-file-contract"></i> Generar Carta de Aceptación
-            </button>
-            ${
-                !todosCompletos
-                ? `<p class='msg-warn'>Faltan documentos obligatorios: ${faltantes.join(", ")}</p>`
-                : solicitudRechazada
-                ? "<p class='msg-warn'>Solicitud <strong>RECHAZADA</strong>. Puede crear una nueva solicitud desde el modal de subir documentos.</p>"
-                : !solicitudEnviada
-                ? "<p class='msg-ok'>Documentos completos. Ahora puede enviar la solicitud.</p>"
-                : solicitudAprobada
-                ? "<p class='msg-ok'>Solicitud <strong>APROBADA</strong>. Puede generar la carta de aceptación.</p>"
-                : "<p class='msg-info'>Solicitud enviada. Esperando aprobación del área.</p>"
-            }
-        </div>
-    </div>
-    `;
-
-    contenedor.innerHTML = tabla;
+        contenedor.innerHTML = tabla;
 }
 
     function abrirDialogCarta() {

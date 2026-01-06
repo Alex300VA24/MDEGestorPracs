@@ -1385,6 +1385,7 @@ window.initReportes = function() {
         return new Promise(async (resolve) => {
             try {
                 const practicantes = await api.listarNombrePracticantes();
+                console.log("PRACTICANTES:", practicantes);
                 
                 const modalHTML = `
                     <div class="modal fade" id="modalSeleccionPracticante" tabindex="-1">
@@ -1399,7 +1400,7 @@ window.initReportes = function() {
                                         <label>Practicante *</label>
                                         <select class="form-control" id="selectPracticanteReporte" required>
                                             <option value="">Seleccione un practicante</option>
-                                            ${practicantes.map(p => `<option value="${p.PracticanteID}">${p.NombreCompleto}</option>`).join('')}
+                                            ${practicantes.data.map(p => `<option value="${p.PracticanteID}">${p.NombreCompleto}</option>`).join('')}
                                         </select>
                                     </div>
                                     <div class="form-group mb-3">

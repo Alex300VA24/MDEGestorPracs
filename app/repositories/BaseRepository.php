@@ -426,7 +426,7 @@ abstract class BaseRepository {
     protected function deleteWhere(array $conditions) {
         try {
             $whereFields = array_map(fn($field) => "$field = :$field", array_keys($conditions));
-            
+
             $sql = "DELETE FROM {$this->table} WHERE " . implode(' AND ', $whereFields);
             
             $stmt = $this->db->prepare($sql);

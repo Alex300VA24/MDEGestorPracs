@@ -96,7 +96,7 @@ class SolicitudController extends BaseController {
             }
 
         } catch (\Exception $e) {
-            $this->errorResponse('Excepción: ' . $e->getMessage(), 500);
+            $this->errorResponse($e->getMessage(), 500);
         }
     }
 
@@ -153,7 +153,7 @@ class SolicitudController extends BaseController {
 
         } catch (\Exception $e) {
             error_log('Error en subirDocumento: ' . $e->getMessage());
-            $this->errorResponse('Excepción: ' . $e->getMessage(), 500);
+            $this->errorResponse($e->getMessage(), 500);
         }
     }
 
@@ -255,12 +255,9 @@ class SolicitudController extends BaseController {
      * Eliminar documento
      * DELETE: /api/solicitudes/documento
      */
-    public function eliminarDocumento() {
+    public function eliminarDocumento($documentoID) {
         try {
             $this->validateMethod('DELETE');
-
-            $data = $this->getJsonInput();
-            $documentoID = $data['documentoID'] ?? null;
 
             if (!$documentoID) {
                 $this->errorResponse('DocumentoID no proporcionado', 400);

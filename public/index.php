@@ -65,12 +65,12 @@ $router->group(['middleware' => AuthMiddleware::class], function($router) {
         $router->put('/actualizarDocumento', 'SolicitudController@actualizarDocumento');
         $router->get('/obtenerPorTipoYPracticante', 'SolicitudController@obtenerDocumentoPorTipoYPracticante');
         $router->get('/obtenerSolicitud', 'SolicitudController@obtenerSolicitudPorID');
-        $router->delete('/eliminarDocumento', 'SolicitudController@eliminarDocumento');
         $router->post('/generarCartaAceptacion', 'SolicitudController@generarCartaAceptacion');
         $router->get('/verificarSolicitudParaCarta', 'SolicitudController@verificarSolicitudParaCarta');
         $router->get('/listarSolicitudesAprobadas', 'SolicitudController@listarSolicitudesAprobadas');
         $router->post('/crear', 'SolicitudController@crearNuevaSolicitud');
         $router->get('/obtenerPorTipoYSolicitud', 'SolicitudController@obtenerDocumentoPorTipoYSolicitud');
+        $router->delete('/eliminarDocumento/{id}', 'SolicitudController@eliminarDocumento');
         $router->get('/estado/{id}', 'SolicitudController@verificarEstado');
         $router->get('/activa/{id}', 'SolicitudController@obtenerSolicitudActiva');
         $router->get('/historial/{id}', 'SolicitudController@obtenerHistorialSolicitudes');

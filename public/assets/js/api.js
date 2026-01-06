@@ -230,7 +230,7 @@ class API {
     }
 
     async eliminarDocumento(documentoID) {
-        return this.post('/solicitudes/eliminarDocumento', { documentoID });
+        return this.delete('/solicitudes/eliminarDocumento/' + documentoID);
     }
 
     async generarCartaAceptacion(solicitudID, numeroExpediente, formato, nombreDirector, cargoDirector) {

@@ -8,26 +8,73 @@ use PhpOffice\PhpWord\Shared\Converter;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
-class CertificadoService {
-    private $repository;
+class CertificadoService extends BaseService {
+    
+    private const DIRECTORIO_CERTIFICADOS = __DIR__ . '/../../public/certificados/';
+    private const URL_BASE_CERTIFICADOS = '/MDEGestorPracs/public/certificados/';
+    
+    private const MESES = [
+        1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
+        5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
+        9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre'
+    ];
     
     public function __construct() {
         $this->repository = new CertificadoRepository();
     }
 
+    /**
+     * Obtener estadísticas de certificados
+     */
     public function obtenerEstadisticas() {
-        return $this->repository->obtenerEstadisticas();
+        $estadisticas = $this->repository->obtenerEstadisticas();
+        
+        return $this->successResult([
+            'totalVigentes' => (int) ($estadisticas['totalVigentes'] ?? 0),
+            'totalFinalizados' => (int) ($estadisticas['totalFinalizados'] ?? 0)
+        ], 'Estadísticas obtenidas correctamente');
     }
 
+    /**
+     * Listar practicantes elegibles para certificado
+     */
     public function listarPracticantesParaCertificado() {
-        return $this->repository->listarPracticantesParaCertificado();
+        $practicantes = $this->repository->listarPracticantesParaCertificado();
+        
+        return $this->successResult(
+            $practicantes,
+            'Practicantes obtenidos correctamente'
+        );
     }
 
+    /**
+     * Obtener información completa del practicante para certificado
+     */
     public function obtenerInformacionCompleta($practicanteID) {
-        return $this->repository->obtenerInformacionCompleta($practicanteID);
+        // Validaciones
+        $this->validateId($practicanteID, 'PracticanteID');
+        
+        $info = $this->repository->obtenerInformacionCompleta($practicanteID);
+        
+        if (!$info) {
+            throw new \Exception('Practicante no encontrado');
+        }
+        
+        return $this->successResult($info, 'Información obtenida correctamente');
     }
 
+    /**
+     * Generar certificado en formato PDF o Word
+     */
     public function generarCertificado($practicanteID, $numeroExpediente, $formato) {
+        // Validaciones
+        $this->validateId($practicanteID, 'PracticanteID');
+        $this->validateRequiredFields(
+            ['numeroExpediente' => $numeroExpediente],
+            ['numeroExpediente']
+        );
+        $this->validateInList($formato, ['pdf', 'word'], 'Formato');
+        
         // Obtener información del practicante
         $info = $this->repository->obtenerInformacionCompleta($practicanteID);
         
@@ -35,54 +82,97 @@ class CertificadoService {
             throw new \Exception('Practicante no encontrado');
         }
 
-        if ($info['EstadoAbrev'] !== 'VIG' && $info['EstadoAbrev'] !== 'FIN') {
+        // Validaciones de negocio
+        $this->validarElegibilidadCertificado($info);
+
+        // Crear directorio si no existe
+        $this->crearDirectorioCertificados();
+
+        // Generar nombre del archivo
+        $nombreArchivo = $this->generarNombreArchivo($info['NombreCompleto'], $formato);
+        $rutaArchivo = self::DIRECTORIO_CERTIFICADOS . $nombreArchivo;
+
+        // Generar certificado según formato
+        if ($formato === 'pdf') {
+            $this->generarPDF($info, $numeroExpediente, $rutaArchivo);
+        } else {
+            $this->generarWord($info, $numeroExpediente, $rutaArchivo);
+        }
+
+        // Cambiar estado del practicante a Finalizado
+        $this->repository->cambiarEstadoAFinalizado($practicanteID);
+        
+        // Registrar certificado generado
+        $this->repository->registrarCertificadoGenerado(
+            $practicanteID, 
+            $nombreArchivo, 
+            $numeroExpediente
+        );
+
+        return $this->successResult([
+            'nombreArchivo' => $nombreArchivo,
+            'url' => self::URL_BASE_CERTIFICADOS . $nombreArchivo
+        ], 'Certificado generado exitosamente. El practicante ha sido marcado como Finalizado.');
+    }
+
+    /**
+     * Obtener historial de certificados generados
+     */
+    public function obtenerHistorialCertificados($practicanteID = null) {
+        if ($practicanteID) {
+            $this->validateId($practicanteID, 'PracticanteID');
+        }
+        
+        $historial = $this->repository->obtenerHistorialCertificados($practicanteID);
+        
+        return $this->successResult(
+            $historial,
+            'Historial obtenido correctamente'
+        );
+    }
+
+    /**
+     * Validar elegibilidad del practicante para certificado
+     */
+    private function validarElegibilidadCertificado($info) {
+        if (!in_array($info['EstadoAbrev'], ['VIG', 'FIN'])) {
             throw new \Exception('Solo se pueden generar certificados para practicantes vigentes o finalizados');
         }
 
-        // Verificar que tenga horas acumuladas
         if ($info['TotalHoras'] <= 0) {
             throw new \Exception('El practicante no tiene horas acumuladas');
         }
 
-        // Verificar que tenga al menos una asistencia registrada
         if (!$info['UltimaAsistencia']) {
             throw new \Exception('El practicante no tiene asistencias registradas');
         }
-
-        // Generar nombre del archivo
-        $anio = date('Y');
-        $nombreCompleto = strtoupper($info['NombreCompleto']);
-        
-        // Crear directorio si no existe
-        $rutaCertificados = __DIR__ . '/../../public/certificados/';
-        if (!file_exists($rutaCertificados)) {
-            mkdir($rutaCertificados, 0777, true);
-        }
-
-        $nombreArchivo = "CERTIFICADO {$anio} {$nombreCompleto}";
-        
-        if ($formato === 'pdf') {
-            $nombreArchivo .= '.pdf';
-            $rutaArchivo = $rutaCertificados . $nombreArchivo;
-            $this->generarPDF($info, $numeroExpediente, $rutaArchivo);
-        } else {
-            $nombreArchivo .= '.docx';
-            $rutaArchivo = $rutaCertificados . $nombreArchivo;
-            $this->generarWord($info, $numeroExpediente, $rutaArchivo);
-        }
-
-        // Cambiar estado del practicante a Finalizado (usa la última fecha de asistencia)
-        $this->repository->cambiarEstadoAFinalizado($practicanteID);
-
-
-        return [
-            'success' => true,
-            'message' => 'Certificado generado exitosamente. El practicante ha sido marcado como Finalizado.',
-            'nombreArchivo' => $nombreArchivo,
-            'url' => '/MDEGestorPracs/public/certificados/' . $nombreArchivo
-        ];
     }
 
+    /**
+     * Crear directorio de certificados si no existe
+     */
+    private function crearDirectorioCertificados() {
+        if (!file_exists(self::DIRECTORIO_CERTIFICADOS)) {
+            if (!mkdir(self::DIRECTORIO_CERTIFICADOS, 0777, true)) {
+                throw new \Exception('No se pudo crear el directorio de certificados');
+            }
+        }
+    }
+
+    /**
+     * Generar nombre del archivo del certificado
+     */
+    private function generarNombreArchivo($nombreCompleto, $formato) {
+        $anio = date('Y');
+        $nombreCompleto = strtoupper($this->sanitizeString($nombreCompleto));
+        $extension = ($formato === 'pdf') ? 'pdf' : 'docx';
+        
+        return "CERTIFICADO_{$anio}_{$nombreCompleto}.{$extension}";
+    }
+
+    /**
+     * Generar certificado en formato Word
+     */
     private function generarWord($info, $numeroExpediente, $rutaArchivo) {
         $phpWord = new PhpWord();
         $phpWord->setDefaultFontName('Arial');
@@ -109,15 +199,14 @@ class CertificadoService {
             ['alignment' => 'center', 'spaceAfter' => 400]
         );
 
-        // Determinar género
+        // Datos del practicante
         $tratamiento = ($info['Genero'] === 'F') ? 'la SRTA.' : 'el SR.';
-
-        // Texto principal
         $nombreCompleto = strtoupper($info['NombreCompleto']);
         $carrera = strtoupper($info['Carrera']);
         $universidad = strtoupper($info['Universidad']);
         $area = strtoupper($info['Area'] ?: 'ADMINISTRACIÓN GENERAL');
 
+        // Texto principal
         $textoPrincipal = "Que, {$tratamiento} {$nombreCompleto} identificado con DNI N° {$info['DNI']} " .
                          "estudiante de la Carrera Profesional de {$carrera} en la {$universidad} " .
                          "ha realizado su Voluntariado Municipal en la {$area} en la Municipalidad " .
@@ -138,7 +227,6 @@ class CertificadoService {
 
         // Fechas y horas
         $fechaInicio = $this->formatearFechaLarga($info['FechaEntrada']);
-        // Usar la última fecha de asistencia como fecha de término
         $fechaTermino = $this->formatearFechaLarga($info['UltimaAsistencia']);
 
         $section->addText(
@@ -177,39 +265,28 @@ class CertificadoService {
         );
 
         // Pie de página
-        $section->addText(
-            'VAMG/svv',
-            ['size' => 7],
-            ['alignment' => 'left', 'spaceAfter' => 20]
-        );
+        $section->addText('VAMG/svv', ['size' => 7], ['alignment' => 'left', 'spaceAfter' => 20]);
+        $section->addText('Cc. Archivo', ['size' => 7], ['alignment' => 'left', 'spaceAfter' => 20]);
+        $section->addText("Exp. N° {$numeroExpediente}", ['size' => 7], ['alignment' => 'left']);
 
-        $section->addText(
-            'Cc. Archivo',
-            ['size' => 7],
-            ['alignment' => 'left', 'spaceAfter' => 20]
-        );
-
-        $section->addText(
-            "Exp. N° {$numeroExpediente}",
-            ['size' => 7],
-            ['alignment' => 'left']
-        );
-
+        // Guardar archivo
         $objWriter = IOFactory::createWriter($phpWord, 'Word2007');
         $objWriter->save($rutaArchivo);
+        
+        $this->log("Certificado Word generado: {$rutaArchivo}", 'INFO');
     }
 
+    /**
+     * Generar certificado en formato PDF
+     */
     private function generarPDF($info, $numeroExpediente, $rutaArchivo) {
-        // Determinar género
-        $tratamiento = ($info['Genero'] === 'F') ? 'la SRTA.' : 'el SR.';
-        
         // Datos formateados
+        $tratamiento = ($info['Genero'] === 'F') ? 'la SRTA.' : 'el SR.';
         $nombreCompleto = strtoupper($info['NombreCompleto']);
         $carrera = strtoupper($info['Carrera']);
         $universidad = strtoupper($info['Universidad']);
         $area = strtoupper($info['Area'] ?: 'ADMINISTRACIÓN GENERAL');
         $fechaInicio = $this->formatearFechaLarga($info['FechaEntrada']);
-        // Usar la última fecha de asistencia como fecha de término
         $fechaTermino = $this->formatearFechaLarga($info['UltimaAsistencia']);
         $fechaActual = $this->formatearFechaCompleta();
 
@@ -227,15 +304,6 @@ class CertificadoService {
                     font-family: Arial, sans-serif;
                     font-size: 11pt;
                     line-height: 1.6;
-                }
-                .center {
-                    text-align: center;
-                }
-                .bold {
-                    font-weight: bold;
-                }
-                .underline {
-                    text-decoration: underline;
                 }
                 .titulo {
                     font-weight: bold;
@@ -285,18 +353,18 @@ class CertificadoService {
             <p class="certifica">CERTIFICA:</p>
             
             <p class="texto-principal">
-                Que, ' . $tratamiento . ' ' . $nombreCompleto . ' identificado con DNI N° ' . $info['DNI'] . ' 
-                estudiante de la Carrera Profesional de ' . $carrera . ' en la ' . $universidad . ' 
-                ha realizado su Voluntariado Municipal en la ' . $area . ' en la Municipalidad 
+                Que, ' . htmlspecialchars($tratamiento) . ' ' . htmlspecialchars($nombreCompleto) . ' identificado con DNI N° ' . htmlspecialchars($info['DNI']) . ' 
+                estudiante de la Carrera Profesional de ' . htmlspecialchars($carrera) . ' en la ' . htmlspecialchars($universidad) . ' 
+                ha realizado su Voluntariado Municipal en la ' . htmlspecialchars($area) . ' en la Municipalidad 
                 Distrital de la Esperanza (RUC N° 20164091547).
             </p>
             
             <p class="modalidad">MODALIDAD PRESENCIAL</p>
             
-            <p class="detalles">INICIO&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;' . $fechaInicio . '</p>
-            <p class="detalles">TÉRMINO&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;' . $fechaTermino . '</p>
+            <p class="detalles">INICIO&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;' . htmlspecialchars($fechaInicio) . '</p>
+            <p class="detalles">TÉRMINO&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;' . htmlspecialchars($fechaTermino) . '</p>
             <br>
-            <p class="detalles">HORAS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' . $info['TotalHoras'] . '</p>
+            <p class="detalles">HORAS&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ' . htmlspecialchars($info['TotalHoras']) . '</p>
             
             <p class="cierre">
                 Durante su permanencia como voluntario en esta entidad, ha demostrado gran espíritu 
@@ -304,11 +372,11 @@ class CertificadoService {
                 encomendadas a satisfacción de esta Comuna.
             </p>
             
-            <p class="fecha">' . $fechaActual . '</p>
+            <p class="fecha">' . htmlspecialchars($fechaActual) . '</p>
             
             <p class="pie">VAMG/svv</p>
             <p class="pie">Cc. Archivo</p>
-            <p class="pie">Exp. N° ' . $numeroExpediente . '</p>
+            <p class="pie">Exp. N° ' . htmlspecialchars($numeroExpediente) . '</p>
         </body>
         </html>';
 
@@ -324,28 +392,32 @@ class CertificadoService {
         $dompdf->render();
         
         // Guardar el PDF
-        file_put_contents($rutaArchivo, $dompdf->output());
+        if (!file_put_contents($rutaArchivo, $dompdf->output())) {
+            throw new \Exception('No se pudo guardar el archivo PDF');
+        }
+        
+        $this->log("Certificado PDF generado: {$rutaArchivo}", 'INFO');
     }
 
+    /**
+     * Formatear fecha larga (DD.MM.YYYY)
+     */
     private function formatearFechaLarga($fecha) {
         if (!$fecha) return '';
 
-        // Manejar tanto formato DateTime (YYYY-MM-DD HH:MM:SS) como Date (YYYY-MM-DD)
-        $fechaSolo = substr($fecha, 0, 10); // Extraer solo YYYY-MM-DD
+        // Extraer solo YYYY-MM-DD
+        $fechaSolo = substr($fecha, 0, 10);
         [$y, $m, $d] = explode('-', $fechaSolo);
         
-        return "$d.$m.$y";
+        return sprintf('%02d.%02d.%s', $d, $m, $y);
     }
 
+    /**
+     * Formatear fecha completa (La Esperanza, DD de mes de YYYY)
+     */
     private function formatearFechaCompleta() {
-        $meses = [
-            1 => 'enero', 2 => 'febrero', 3 => 'marzo', 4 => 'abril',
-            5 => 'mayo', 6 => 'junio', 7 => 'julio', 8 => 'agosto',
-            9 => 'septiembre', 10 => 'octubre', 11 => 'noviembre', 12 => 'diciembre'
-        ];
-        
         $dia = date('d');
-        $mes = $meses[(int)date('m')];
+        $mes = self::MESES[(int)date('m')];
         $anio = date('Y');
         
         return "La Esperanza, {$dia} de {$mes} de {$anio}";

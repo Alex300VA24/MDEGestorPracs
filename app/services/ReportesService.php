@@ -10,7 +10,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\IOFactory;
 
-class ReportesService {
+class ReportesService extends BaseService {
     private $reportesRepository;
     
     public function __construct() {

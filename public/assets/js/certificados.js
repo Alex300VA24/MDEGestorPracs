@@ -17,8 +17,8 @@ window.initCertificados = function() {
         async function cargarEstadisticas() {
             try {
                 const data = await api.obtenerEstadisticasCertificados();
-                document.getElementById('totalVigentes').textContent = data.totalVigentes || 0;
-                document.getElementById('totalFinalizados').textContent = data.totalFinalizados || 0;
+                document.getElementById('totalVigentes').textContent = data.data.totalVigentes || 0;
+                document.getElementById('totalFinalizados').textContent = data.data.totalFinalizados || 0;
             } catch (error) {
                 console.error('Error al cargar estadísticas:', error);
                 mostrarAlerta({
@@ -37,7 +37,7 @@ window.initCertificados = function() {
                 
                 select.innerHTML = '<option value="">-- Seleccione un practicante --</option>';
                 
-                data.practicantes.forEach(p => {
+                data.data.forEach(p => {
                     const option = document.createElement('option');
                     option.value = p.PracticanteID;
                     option.textContent = `${p.NombreCompleto} (${p.Estado})`;
@@ -69,7 +69,7 @@ window.initCertificados = function() {
                 
                 // Obtener información completa
                 const data = await api.obtenerInformacionCertificado(practicanteID);
-                mostrarInformacion(data);
+                mostrarInformacion(data.data);
             } catch (error) {
                 console.error('Error al cargar información:', error);
                 mostrarAlerta({tipo:'error', titulo: 'Error', 

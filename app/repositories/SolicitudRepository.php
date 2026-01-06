@@ -36,7 +36,7 @@ class SolicitudRepository extends BaseRepository {
         if ($documento && isset($documento['Archivo'])) {
             $documento['Archivo'] = $this->convertBinaryToBase64($documento['Archivo']);
         }
-
+        error_log("Documento obtenido para PracticanteID $practicanteID, Tipo: $tipoDocumento - " . ($documento ? "Encontrado" : "No encontrado"));
         return $documento;
     }
 
@@ -84,17 +84,31 @@ class SolicitudRepository extends BaseRepository {
                 d.TipoDocumento,
                 d.Observaciones,
                 d.FechaSubida,
-                CONVERT(VARCHAR(MAX), CAST(d.Archivo AS VARBINARY(MAX)), 1) AS Archivo
+                d.Archivo
             FROM DocumentoSolicitud d
             INNER JOIN SolicitudPracticas s ON d.SolicitudID = s.SolicitudID
             INNER JOIN Estado e ON s.EstadoID = e.EstadoID
             WHERE s.PracticanteID = :practicanteID
-                AND e.Abreviatura IN ('PEN', 'REV', 'APR')
+            AND e.Abreviatura IN ('PEN', 'REV', 'APR')
             ORDER BY d.FechaSubida DESC
         ";
 
-        return $this->executeQuery($sql, [':practicanteID' => $practicanteID], 'all');
+        $documentos = $this->executeQuery(
+            $sql,
+            [':practicanteID' => $practicanteID],
+            'all'
+        );
+
+        // 🔁 FORMATEO CORRECTO A BASE64
+        foreach ($documentos as &$doc) {
+            if (!empty($doc['Archivo'])) {
+                $doc['Archivo'] = base64_encode($doc['Archivo']);
+            }
+        }
+
+        return $documentos;
     }
+
 
     /**
      * Obtener documento por ID
@@ -194,6 +208,8 @@ class SolicitudRepository extends BaseRepository {
      * Eliminar documento
      */
     public function eliminarDocumento($documentoID) {
+        $this->table = 'DocumentoSolicitud';
+        $this->primaryKey = 'DocumentoID';
         return $this->executeTransaction(function() use ($documentoID) {
             // Eliminar documento
             $deleted = $this->deleteWhere(['DocumentoID' => $documentoID]);
