@@ -47,7 +47,7 @@
             </div>
             
             <button type="submit" class="btn-success" id="btnEnviarSolicitud">Enviar Solicitud</button>
-            <button type="button" onclick="cerrarModalEnviarSolicitud()">Cancelar</button>
+            <button type="button" id="btnCancelarEnviar">Cancelar</button>
         </form>
     </div>
 </div>

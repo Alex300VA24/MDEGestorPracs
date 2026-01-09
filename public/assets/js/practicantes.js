@@ -285,6 +285,10 @@
             const formAceptar = document.getElementById('formAceptarPracticante');
             addListener(formAceptar, 'submit', (e) => this.handleSubmitAceptar(e));
 
+            // Cerrar Modal Aceptar
+            const btnCerrarAceptar = document.getElementById('btnCerrarAceptarPracticante');
+            addListener(btnCerrarAceptar, 'click', () => this.cerrarModalAceptar());
+
             // === MENSAJES ===
     
             const btnMensajes = document.getElementById('btnMensajes');
@@ -292,6 +296,8 @@
 
             const btnCerrarMensajes = document.getElementById('btnCerrarMensajes');
             addListener(btnCerrarMensajes, 'click', () => this.cerrarModalMensajes());
+
+
 
             // Event delegation para botones de eliminar mensaje
             const listaMensajes = document.getElementById('listaMensajes');

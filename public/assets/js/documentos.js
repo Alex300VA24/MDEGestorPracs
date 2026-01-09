@@ -181,6 +181,10 @@
             const formEnviar = document.getElementById('formEnviarSolicitud');
             addListener(formEnviar, 'submit', (e) => this.handleEnviarSolicitud(e));
 
+            // Cerrar modal enviar solicitud cancelar
+            const btnCancelarEnviar = document.getElementById('btnCancelarEnviar');
+            addListener(btnCancelarEnviar, 'click', () => this.cerrarModalEnviarSolicitud());
+
             // Botón generar carta
             const btnAbrirCarta = document.getElementById('btnGenerarCarta');
             addListener(btnAbrirCarta, 'click', () => this.abrirDialogCarta());

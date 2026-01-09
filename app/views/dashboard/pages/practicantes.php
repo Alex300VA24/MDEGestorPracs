@@ -173,7 +173,7 @@
             
             <!-- Botones de Acción -->
             <div class="modal-footer">
-                <button type="button" onclick="cerrarModalAceptar()" class="btn-cancel">
+                <button type="button" id="btnCerrarAceptarPracticante" class="btn-cancel">
                     <i class="fas fa-times"></i> Cancelar
                 </button>
                 <button type="submit" class="btn-success" id="btnEnviarRespuesta">
