@@ -1,4 +1,4 @@
-# Gestor de Practicantes
+# MDE Gestor de Practicantes
 
 ## Descripción
 El **Gestor de Practicantes** es una aplicación diseñada para gestionar de manera eficiente los practicantes en una organización. Incluye funcionalidades como:
@@ -29,7 +29,7 @@ El **Gestor de Practicantes** es una aplicación diseñada para gestionar de man
 
 1. Clona el repositorio:
    ```bash
-   git clone https://github.com/tu-usuario/gestorPracticantes.git
+   git clone https://github.com/Alex300VA24/MDEGestorPracs.git
    ```
 
 2. Navega al directorio del proyecto:
