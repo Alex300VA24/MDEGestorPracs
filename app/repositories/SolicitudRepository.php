@@ -285,7 +285,7 @@ class SolicitudRepository extends BaseRepository {
     public function obtenerSolicitudPorPracticante($practicanteID) {
         return $this->findFirst(
             ['PracticanteID' => $practicanteID],
-            'FechaSolicitud DESC'
+            'FechaSolicitud DESC, SolicitudID DESC'
         );
     }
 
@@ -300,15 +300,22 @@ class SolicitudRepository extends BaseRepository {
                 s.EstadoID,
                 s.PracticanteID,
                 s.AreaID,
-                e.Abreviatura AS EstadoAbrev,
-                e.Descripcion AS EstadoDesc,
+                e.Abreviatura AS EstadoSolicitud,
+                e.Descripcion AS EstadoSolicitudDesc,
                 a.NombreArea
             FROM SolicitudPracticas s
+            INNER JOIN Practicante p ON s.PracticanteID = p.PracticanteID
             INNER JOIN Estado e ON s.EstadoID = e.EstadoID
             LEFT JOIN Area a ON s.AreaID = a.AreaID
             WHERE s.PracticanteID = :practicanteID
-                AND e.Abreviatura IN ('PEN', 'REV', 'APR')
-            ORDER BY s.FechaSolicitud DESC
+                AND e.Abreviatura IN ('REV', 'APR', 'NEG')
+                AND NOT (
+                    (p.EstadoID in (5, 8) AND e.Abreviatura = 'APR')
+                    OR
+                    (p.EstadoID in (5, 8) AND e.Abreviatura = 'NEG')
+                )
+            ORDER BY s.FechaSolicitud DESC,
+                        s.SolicitudID DESC
         ";
 
         return $this->executeQuery($sql, [':practicanteID' => $practicanteID], 'one');
@@ -328,7 +335,8 @@ class SolicitudRepository extends BaseRepository {
             FROM SolicitudPracticas s
             INNER JOIN Estado e ON s.EstadoID = e.EstadoID
             WHERE s.PracticanteID = :practicanteID
-            ORDER BY s.FechaSolicitud DESC
+            ORDER BY s.FechaSolicitud DESC,
+                     s.SolicitudID DESC
         ";
 
         return $this->executeQuery($sql, [':practicanteID' => $practicanteID], 'one');
@@ -342,8 +350,10 @@ class SolicitudRepository extends BaseRepository {
             SELECT COUNT(*) AS Total
             FROM SolicitudPracticas s
             INNER JOIN Estado e ON s.EstadoID = e.EstadoID
+            INNER JOIN Practicante p ON s.PracticanteID = p.PracticanteID
             WHERE s.PracticanteID = :practicanteID
                 AND e.Abreviatura IN ('PEN', 'REV', 'APR')
+                AND p.PracticanteID = 8
         ";
 
         $result = $this->executeQuery($sql, [':practicanteID' => $practicanteID], 'one');
@@ -367,7 +377,8 @@ class SolicitudRepository extends BaseRepository {
             INNER JOIN Estado e ON s.EstadoID = e.EstadoID
             LEFT JOIN Area a ON s.AreaID = a.AreaID
             WHERE s.PracticanteID = :practicanteID
-            ORDER BY s.FechaSolicitud DESC
+            ORDER BY s.FechaSolicitud DESC,
+                     s.SolicitudID DESC
         ";
 
         return $this->executeQuery($sql, [':practicanteID' => $practicanteID], 'all');

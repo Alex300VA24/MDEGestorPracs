@@ -28,17 +28,17 @@
                 <label>Seleccionar Fecha:</label>
                 <input type="date" id="fechaFiltro" class="form-control">
             </div>
-            <button class="btn-primary" onclick="filtrarPorFecha()">
+            <button class="btn-primary" id="btnFiltrarFecha">
                 <i class="fas fa-filter"></i> Filtrar
             </button>
-            <button class="btn-success" onclick="limpiarFiltros()">
+            <button class="btn-success" id="btnLimpiarFiltros">
                 <i class="fas fa-times"></i> Hoy
             </button>
         </div>
     </div>
 
     <div class="content-card">
-        <h3 class="card-title">Registro de Asistencia - Hoy</h3>
+        <h3 class="card-title" id="asistenciaFechaID">Registro de Asistencia - Hoy</h3>
         <div class="table-container">
             <table class="table">
                 <thead>

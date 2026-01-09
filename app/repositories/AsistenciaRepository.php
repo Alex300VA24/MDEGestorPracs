@@ -44,13 +44,13 @@ class AsistenciaRepository extends BaseRepository
      */
     public function registrarEntrada($practicanteID, $fecha, $horaEntrada, $turnoID)
     {
-        $asistenciaID = $this->insertWithOutput([
+        $asistenciaID = $this->insertAndGetId([
             'PracticanteID' => $practicanteID,
             'Fecha' => $fecha,
             'HoraEntrada' => $horaEntrada,
             'TurnoID' => $turnoID
         ]);
-
+        
         return [
             'success' => true,
             'message' => "Entrada registrada correctamente a las $horaEntrada",
@@ -202,32 +202,63 @@ class AsistenciaRepository extends BaseRepository
         $sql = "
             SELECT 
                 p.PracticanteID,
-                CONCAT(p.Nombres, ' ', p.ApellidoPaterno, ' ', p.ApellidoMaterno) AS NombreCompleto,
+                CONCAT(
+                    p.Nombres, ' ',
+                    p.ApellidoPaterno, ' ',
+                    p.ApellidoMaterno
+                ) AS NombreCompleto,
                 p.FechaEntrada AS FechaInicioPracticas,
+
                 a.AsistenciaID,
                 a.Fecha,
                 a.HoraEntrada,
                 a.HoraSalida,
                 a.TurnoID,
                 t.Descripcion AS Turno,
+
                 CASE 
                     WHEN a.AsistenciaID IS NULL THEN 'Sin registro'
                     WHEN a.HoraEntrada IS NULL THEN 'Ausente'
                     WHEN a.HoraSalida IS NULL THEN 'En curso'
                     ELSE 'Presente'
                 END AS Estado
+
             FROM Practicante p
-            INNER JOIN SolicitudPracticas sp ON p.PracticanteID = sp.PracticanteID
-            INNER JOIN Area ar ON sp.AreaID = ar.AreaID
-            LEFT JOIN Asistencia a ON p.PracticanteID = a.PracticanteID AND a.Fecha = :fecha
-            LEFT JOIN Turno t ON a.TurnoID = t.TurnoID
-            INNER JOIN Estado eP ON p.EstadoID = eP.EstadoID
-            INNER JOIN Estado eS ON sp.EstadoID = eS.EstadoID
-            WHERE 
-                ar.AreaID = :areaID
-                AND eP.Abreviatura = 'VIG'
+
+            INNER JOIN Estado eP
+                ON p.EstadoID = eP.EstadoID
+            AND eP.Abreviatura = 'VIG'
+
+            /* ÚLTIMA SOLICITUD APROBADA */
+            OUTER APPLY (
+                SELECT TOP 1
+                    sp.SolicitudID,
+                    sp.AreaID
+                FROM SolicitudPracticas sp
+                INNER JOIN Estado eS
+                    ON sp.EstadoID = eS.EstadoID
+                WHERE sp.PracticanteID = p.PracticanteID
                 AND eS.Abreviatura = 'APR'
-            ORDER BY p.Nombres, p.ApellidoPaterno, p.ApellidoMaterno
+                ORDER BY sp.FechaSolicitud DESC,
+                        sp.SolicitudID DESC
+            ) ultAPR
+
+            INNER JOIN Area ar
+                ON ar.AreaID = ultAPR.AreaID
+            AND ar.AreaID = :areaID
+
+            LEFT JOIN Asistencia a
+                ON p.PracticanteID = a.PracticanteID
+            AND a.Fecha = :fecha
+
+            LEFT JOIN Turno t
+                ON a.TurnoID = t.TurnoID
+
+            ORDER BY 
+                p.Nombres,
+                p.ApellidoPaterno,
+                p.ApellidoMaterno
+
         ";
 
         $asistencias = $this->executeQuery(

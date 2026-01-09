@@ -76,7 +76,7 @@ $router->group(['middleware' => AuthMiddleware::class], function($router) {
         $router->get('/historial/{id}', 'SolicitudController@obtenerHistorialSolicitudes');
     });
     
-    // ✅ MENSAJES
+    // MENSAJES
     $router->group(['prefix' => '/api/mensajes'], function($router) {
         $router->post('/enviar', 'MensajeController@enviarSolicitud');
         $router->post('/responder', 'MensajeController@responderSolicitud');
@@ -84,14 +84,14 @@ $router->group(['middleware' => AuthMiddleware::class], function($router) {
         $router->delete('/{id}', 'MensajeController@eliminarMensaje');
     });
     
-    // ✅ ÁREAS Y TURNOS
+    // ÁREAS Y TURNOS
     $router->get('/api/areas', 'AreaController@listar');
     $router->get('/api/turnos', 'TurnoController@listar');
     $router->get('/api/turnos/practicante/{id}', 'TurnoController@obtenerPorPracticante');
     
-    // ✅ ASISTENCIAS
+    // ASISTENCIAS
     $router->group(['prefix' => '/api/asistencias'], function($router) {
-        $router->post('', 'AsistenciaController@listarAsistencias');  // ✅ Sin barra
+        $router->post('', 'AsistenciaController@listarAsistencias');
         $router->get('/obtener', 'AsistenciaController@obtenerAsistenciaCompleta');
         $router->post('/entrada', 'AsistenciaController@registrarEntrada');
         $router->post('/salida', 'AsistenciaController@registrarSalida');
@@ -99,7 +99,7 @@ $router->group(['middleware' => AuthMiddleware::class], function($router) {
         $router->post('/pausa/finalizar', 'AsistenciaController@finalizarPausa');
     });
     
-    // ✅ REPORTES
+    // REPORTES
     $router->group(['prefix' => '/api/reportes'], function($router) {
         $router->get('/practicantes-activos', 'ReportesController@practicantesActivos');
         $router->get('/practicantes-completados', 'ReportesController@practicantesCompletados');
@@ -119,10 +119,10 @@ $router->group(['middleware' => AuthMiddleware::class], function($router) {
         $router->post('/exportar-word', 'ReportesController@exportarWord');
     });
     
-    // ✅ USUARIOS - ARREGLADO: '' en lugar de '/'
+    // USUARIOS: '' en lugar de '/'
     $router->group(['prefix' => '/api/usuarios'], function($router) {
-        $router->get('', 'UsuarioController@listar');  // ✅ Sin barra
-        $router->post('', 'UsuarioController@crear');  // ✅ Sin barra
+        $router->get('', 'UsuarioController@listar');  //  Sin barra
+        $router->post('', 'UsuarioController@crear');  // Sin barra
         $router->post('/filtrar', 'UsuarioController@filtrar');
         $router->get('/{id}', 'UsuarioController@obtener');
         $router->put('/{id}', 'UsuarioController@actualizar');
@@ -130,7 +130,7 @@ $router->group(['middleware' => AuthMiddleware::class], function($router) {
         $router->put('/{id}/password', 'UsuarioController@cambiarPassword');
     });
     
-    // ✅ CERTIFICADOS
+    // CERTIFICADOS
     $router->group(['prefix' => '/api/certificados'], function($router) {
         $router->get('/estadisticas', 'CertificadoController@obtenerEstadisticas');
         $router->get('/listar-practicantes', 'CertificadoController@listarPracticantesParaCertificado');

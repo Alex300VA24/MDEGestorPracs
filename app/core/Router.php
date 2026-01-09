@@ -56,7 +56,7 @@ class Router {
             'path' => $fullPath,
             'handler' => $handler,
             'middleware' => $this->groupMiddleware,
-            'skip_csrf' => $attributes['skip_csrf'] ?? false  // ✅ Nuevo
+            'skip_csrf' => $attributes['skip_csrf'] ?? false  // Nuevo
         ];
     }
 

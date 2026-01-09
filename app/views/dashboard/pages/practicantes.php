@@ -79,7 +79,7 @@
       
       <input type="text" id="Carrera" name="Carrera" placeholder="Ej: Ingeniería de Sistemas, Administración" required minlength="10" title="Escriba el nombre completo de la carrera (mínimo 15 caracteres)">
       
-      <input type="email" id="Email" name="Email" placeholder="Ej: correo@ejemplo.com" required pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" title="Ingrese un correo válido con @ y dominio">
+      <input type="email" id="Email" name="Email" placeholder="Ej: correo@ejemplo.com" title="Ingrese un correo válido con @ y dominio">
       
       <input type="tel" id="Telefono" name="Telefono" placeholder="Ej: +51 987654321" required pattern="\+51\s?\d{9}" title="Ingrese +51 seguido de 9 dígitos">
       
@@ -88,7 +88,7 @@
       <input type="text" id="Universidad" name="Universidad" placeholder="Ej: Universidad Nacional de Trujillo, Universidad Privada Antenor Orrego" required minlength="20" title="Escriba el nombre completo de la universidad (mínimo 20 caracteres)">
       
       <button type="submit" id="btnGuardarPracticante">Guardar</button>
-      <button type="button" onclick="cerrarModalPracticante()">Cancelar</button>
+      <button type="button" class="modal-close">Cancelar</button>
     </form>
   </div>
 </div>
@@ -103,7 +103,7 @@
         </div>
         
         <div class="modal-footer">
-            <button type="button" onclick="cerrarModalMensajes()" class="btn-cancel">
+            <button type="button" id="btnCerrarMensajes" class="btn-cancel">
                 <i class="fas fa-times"></i> Cerrar
             </button>
         </div>

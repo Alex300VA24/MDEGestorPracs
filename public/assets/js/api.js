@@ -242,10 +242,6 @@ class API {
             cargoDirector
         });
 
-        if (!response.archivo || !response.archivo.url) {
-            throw new Error('Archivo de carta no disponible en el servidor');
-        }
-
         return response;
     }
 

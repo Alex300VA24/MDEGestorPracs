@@ -319,33 +319,40 @@ abstract class BaseRepository {
     /**
      * Insertar registro y retornar el ID usando OUTPUT
      */
-    protected function insertWithOutput(array $data, $outputColumn = null) {
+    protected function insertAndGetId(array $data)
+    {
         try {
-            $outputColumn = $outputColumn ?? $this->primaryKey;
             $fields = array_keys($data);
             $placeholders = array_map(fn($field) => ":$field", $fields);
-            
-            $sql = "INSERT INTO {$this->table} (" . implode(', ', $fields) . ") 
-                    OUTPUT INSERTED.$outputColumn
-                    VALUES (" . implode(', ', $placeholders) . ")";
-            
+
+            $sql = "
+                INSERT INTO {$this->table} (" . implode(', ', $fields) . ")
+                VALUES (" . implode(', ', $placeholders) . ");
+                SELECT CAST(SCOPE_IDENTITY() AS INT) AS id;
+            ";
+
             $stmt = $this->db->prepare($sql);
-            
+
             foreach ($data as $key => $value) {
-                $type = $this->getParamType($value);
-                $stmt->bindValue(":$key", $value, $type);
+                $stmt->bindValue(":$key", $value, $this->getParamType($value));
             }
-            
+
             $stmt->execute();
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            return $result[$outputColumn] ?? null;
-            
+
+            // ⬅️ MOVER AL SEGUNDO RESULT SET
+            $stmt->nextRowset();
+
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            return $row['id'] ?? null;
+
         } catch (PDOException $e) {
-            error_log("Error en insertWithOutput: " . $e->getMessage());
+            error_log("Error en insertAndGetId: " . $e->getMessage());
             throw new \Exception($this->cleanErrorMessage($e));
         }
     }
+
+
     
     /**
      * Actualizar registro genérico

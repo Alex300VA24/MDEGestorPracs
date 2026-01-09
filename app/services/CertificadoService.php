@@ -103,11 +103,11 @@ class CertificadoService extends BaseService {
         $this->repository->cambiarEstadoAFinalizado($practicanteID);
         
         // Registrar certificado generado
-        $this->repository->registrarCertificadoGenerado(
+        /*$this->repository->registrarCertificadoGenerado(
             $practicanteID, 
             $nombreArchivo, 
             $numeroExpediente
-        );
+        );*/
 
         return $this->successResult([
             'nombreArchivo' => $nombreArchivo,

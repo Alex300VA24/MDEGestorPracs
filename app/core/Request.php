@@ -7,7 +7,7 @@ class Request {
     private $query;
     private $body;
     private $headers;
-    private $route;  // ✅ Nuevo
+    private $route;  //  Nuevo
 
     public function __construct() {
         $this->method = $_SERVER['REQUEST_METHOD'];

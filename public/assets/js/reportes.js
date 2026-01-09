@@ -1,725 +1,772 @@
-// reportes.js - Lógica completa para el sistema de reportes
-window.initReportes = function() {
-    console.log("Reportes iniciado");
+// reportes.js - Refactorizado con lifecycle management
+
+(function() {
+    'use strict';
+
+    // ==================== CONFIGURACIÓN DEL MÓDULO ====================
     
-    let datosReporteActual = null;
-    let tipoReporteActual = null;
+    const MODULE_NAME = 'reportes';
+    
+    // Estado privado del módulo
+    let moduleState = {
+        datosReporteActual: null,
+        tipoReporteActual: null,
+        cargandoDesde: null,
+        eventListeners: [],
+        modalesAbiertos: []
+    };
 
-    // ==================== REPORTES DE PRACTICANTES ====================
+    // Constantes
+    const MIN_TIEMPO_CARGA = 1500; // 1.5 segundos
 
-    async function generarReportePracticantesActivos() {
-        try {
-            mostrarCargando('Generando reporte de practicantes vigentes...');
-            
-            const response = await api.reportePracticantesActivos();
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'practicantes_activos';
-                
-                renderizarReportePracticantes(response.data, 'practicantes-activos');
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte de practicantes vigentes');
-        } finally {
-            await ocultarCargando(); // 👈 Ahora espera a que cierre completamente
-            
-            // Hacer scroll después de que Swal se cerró
-            const resultados = document.getElementById('resultadosReporte');
-            if (resultados && resultados.style.display !== 'none') {
-                resultados.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+    // ==================== CLASE PRINCIPAL DEL MÓDULO ====================
+    
+    class ReportesModule {
+        constructor() {
+            this.state = moduleState;
+            this.initialized = false;
         }
-    }
 
-    async function generarReportePracticantesCompletados() {
-        try {
-            mostrarCargando('Generando reporte de prácticas completadas...');
-            
-            const response = await api.reportePracticantesCompletados();
-            console.log(response);
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'practicantes_completados';
-                
-                renderizarReportePracticantes(response.data, 'practicantes-completados');
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte de prácticas completadas');
-        } finally {
-            await ocultarCargando(); // 👈 Ahora espera a que cierre completamente
-            
-            // Hacer scroll después de que Swal se cerró
-            const resultados = document.getElementById('resultadosReporte');
-            if (resultados && resultados.style.display !== 'none') {
-                resultados.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-    }
-
-    async function generarReportePorArea() {
-        try {
-            // Mostrar modal para seleccionar área (opcional)
-            const areaID = await mostrarModalSeleccionArea();
-            
-            mostrarCargando('Generando reporte por área...');
-            
-            const response = await api.reportePorArea(areaID);
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'por_area';
-                
-                renderizarReportePorArea(response.data);
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte por área');
-        } finally {
-            await ocultarCargando(); // 👈 Ahora espera a que cierre completamente
-            
-            // Hacer scroll después de que Swal se cerró
-            const resultados = document.getElementById('resultadosReporte');
-            if (resultados && resultados.style.display !== 'none') {
-                resultados.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-    }
-
-    async function generarReportePorUniversidad() {
-        try {
-            mostrarCargando('Generando reporte por universidad...');
-            
-            const response = await api.reportePorUniversidad();
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'por_universidad';
-                
-                renderizarReportePorUniversidad(response.data);
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte por universidad');
-        } finally {
-            await ocultarCargando(); // 👈 Ahora espera a que cierre completamente
-            
-            // Hacer scroll después de que Swal se cerró
-            const resultados = document.getElementById('resultadosReporte');
-            if (resultados && resultados.style.display !== 'none') {
-                resultados.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-    }
-
-    // ==================== REPORTES DE ASISTENCIA ====================
-
-    async function generarReporteAsistenciaPracticante() {
-        try {
-            // Mostrar modal para seleccionar practicante y fechas
-            const params = await mostrarModalSeleccionPracticante();
-            
-            if (!params) return;
-            
-            mostrarCargando('Generando reporte de asistencias...');
-            
-            const response = await api.reporteAsistenciaPracticante(
-                params.practicanteID,
-                params.fechaInicio,
-                params.fechaFin
-            );
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'asistencia_practicante';
-                
-                renderizarReporteAsistenciaPracticante(response.data);
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte de asistencias');
-        } finally {
-            ocultarCargando();
-        }
-    }
-
-    async function generarReporteAsistenciaDia() {
-        try {
-            // Mostrar modal para seleccionar fecha (opcional, por defecto hoy)
-            const fecha = await mostrarModalSeleccionFecha() || new Date().toISOString().split('T')[0];
-            
-            mostrarCargando('Generando reporte del día...');
-            
-            const response = await api.reporteAsistenciaDelDia(fecha);
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'asistencia_dia';
-                
-                renderizarReporteAsistenciaDia(response.data);
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte del día');
-        } finally {
-            ocultarCargando();
-        }
-    }
-
-    async function generarReporteAsistenciaMensual() {
-        try {
-            // Mostrar modal para seleccionar mes y año
-            const params = await mostrarModalSeleccionMes();
-            
-            if (!params) return;
-            
-            mostrarCargando('Generando reporte mensual...');
-            
-            const response = await api.reporteAsistenciaMensual(params.mes, params.anio);
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'asistencia_mensual';
-                
-                renderizarReporteAsistenciaMensual(response.data);
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte mensual');
-        } finally {
-            ocultarCargando();
-        }
-    }
-
-    async function generarReporteAsistenciaAnual() {
-        try {
-            // Mostrar modal para seleccionar mes y año
-            const params = await mostrarModalSeleccionYear();
-            
-            if (!params) return;
-            
-            mostrarCargando('Generando reporte mensual...');
-            
-            const response = await api.reporteAsistenciaAnual(params.anio);
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'asistencia_anual';
-                
-                renderizarReporteAsistenciaAnual(response.data);
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte anual');
-        } finally {
-            ocultarCargando();
-        }
-    }
-
-    async function generarReporteHorasAcumuladas() {
-        try {
-            mostrarCargando('Generando reporte de horas acumuladas...');
-            
-            const response = await api.reporteHorasAcumuladas();
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'horas_acumuladas';
-                
-                renderizarReporteHorasAcumuladas(response.data);
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte de horas acumuladas');
-        } finally {
-            ocultarCargando();
-        }
-    }
-
-    // ==================== REPORTES ESTADÍSTICOS ====================
-
-    async function generarReporteEstadisticasGenerales() {
-        try {
-            mostrarCargando('Generando estadísticas generales...');
-            
-            const response = await api.reporteEstadisticasGenerales();
-            console.log(response);
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'estadisticas_generales';
-                
-                renderizarReporteEstadisticas(response.data);
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar las estadísticas generales');
-        } finally {
-            await await ocultarCargando(); // 👈 Ahora espera a que cierre completamente
-            
-            // Hacer scroll después de que Swal se cerró
-            const resultados = document.getElementById('resultadosReporte');
-            if (resultados && resultados.style.display !== 'none') {
-                resultados.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-    }
-
-    async function generarReportePromedioHoras() {
-        try {
-            mostrarCargando('Generando reporte de promedio de horas...');
-            
-            const response = await api.reportePromedioHoras();
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'promedio_horas';
-                
-                renderizarReportePromedioHoras(response.data);
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte de promedio de horas');
-        } finally {
-            await ocultarCargando(); // 👈 Ahora espera a que cierre completamente
-            
-            // Hacer scroll después de que Swal se cerró
-            const resultados = document.getElementById('resultadosReporte');
-            if (resultados && resultados.style.display !== 'none') {
-                resultados.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-    }
-
-    async function generarReporteComparativoAreas() {
-        try {
-            mostrarCargando('Generando reporte comparativo de áreas...');
-            
-            const response = await api.reporteComparativoAreas();
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'comparativo_areas';
-                
-                renderizarReporteComparativoAreas(response.data);
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte comparativo de áreas');
-        } finally {
-            await await await ocultarCargando(); // 👈 Ahora espera a que cierre completamente
-            
-            // Hacer scroll después de que Swal se cerró
-            const resultados = document.getElementById('resultadosReporte');
-            if (resultados && resultados.style.display !== 'none') {
-                resultados.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-    }
-
-    async function generarReporteCompleto() {
-        try {
-            mostrarCargando('Generando reporte completo...');
-            
-            const response = await api.reporteCompleto();
-            console.log(response);
-            
-            if (response.success) {
-                datosReporteActual = response.data;
-                tipoReporteActual = 'completo';
-                
-                renderizarReporteCompleto(response.data);
-            } else {
-                mostrarError('Error al generar el reporte');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al generar el reporte completo');
-        } finally {
-            await ocultarCargando(); // 👈 Ahora espera a que cierre completamente
-            
-            // Hacer scroll después de que Swal se cerró
-            const resultados = document.getElementById('resultadosReporte');
-            if (resultados && resultados.style.display !== 'none') {
-                resultados.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-    }
-
-    // ==================== FUNCIONES DE RENDERIZADO ====================
-
-    function renderizarReportePracticantes(datos, idSeccion) {
-        const resultadosDiv = document.getElementById('resultadosReporte');
-        const tablaDiv = document.getElementById('tablaResultados');
+        // ============ INICIALIZACIÓN ============
         
-        let html = `
-            <div class="reporte-header">
-                <h4>${datos.titulo}</h4>
-                <p class="text-muted">Total de practicantes: ${datos.total}</p>
-                <p class="text-muted">Fecha: ${new Date(datos.fecha).toLocaleString('es-PE')}</p>
-            </div>
-            
-            <div class="table-container">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th>Nombre Completo</th>
-                            <th>DNI</th>
-                            <th>Email</th>
-                            <th>Universidad</th>
-                            <th>Carrera</th>
-                            <th>Área</th>
-                            <th>Fecha Entrada</th>
-                            <th>Fecha Salida</th>
-                            <th>Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        if (datos.practicantes && datos.practicantes.length > 0) {
-            datos.practicantes.forEach(p => {
-                html += `
-                    <tr>
-                        <td>${p.NombreCompleto}</td>
-                        <td>${p.DNI}</td>
-                        <td>${p.Email}</td>
-                        <td>${p.Universidad}</td>
-                        <td>${p.Carrera}</td>
-                        <td>${p.AreaNombre || 'N/A'}</td>
-                        <td>${formatearFecha(p.FechaEntrada)}</td>
-                        <td>${formatearFecha(p.FechaSalida)}</td>
-                        <td><span class="badge bg-${p.Estado === 'Vigente' ? 'success' : 'secondary'}">${p.Estado}</span></td>
-                    </tr>
-                `;
-            });
-        } else {
-            html += '<tr><td colspan="9" class="text-center">No hay datos para mostrar</td></tr>';
-        }
-        
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-        
-        tablaDiv.innerHTML = html;
-        resultadosDiv.classList.remove('hidden');
-        resultadosDiv.style.display = 'block';
-        
-        // Scroll suave al resultado
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+        async init() {
+            if (this.initialized) {
+                console.warn('⚠️ Módulo Reportes ya inicializado');
+                return this;
+            }
 
-    function renderizarReportePorArea(datos) {
-        const resultadosDiv = document.getElementById('resultadosReporte');
-        const tablaDiv = document.getElementById('tablaResultados');
-        
-        let html = `
-            <div class="reporte-header">
-                <h4>${datos.titulo}</h4>
-                <p class="text-muted">Fecha: ${new Date(datos.fecha).toLocaleString('es-PE')}</p>
-            </div>
-        `;
-        
-        if (datos.areas && datos.areas.length > 0) {
-            datos.areas.forEach(area => {
-                html += `
-                    <div class="area-section mb-4">
-                        <h5 class="area-title">${area.AreaNombre}</h5>
-                        <div class="area-stats">
-                            <span class="badge bg-primary">Total: ${area.TotalPracticantes}</span>
-                            <span class="badge bg-success">Activos: ${area.Activos}</span>
-                            <span class="badge bg-secondary">Completados: ${area.Completados}</span>
-                        </div>
-                        
-                        <div class="table-container">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>DNI</th>
-                                        <th>Universidad</th>
-                                        <th>Estado</th>
-                                        <th>Fecha Entrada</th>
-                                        <th>Fecha Salida</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                `;
+            try {
+                // Configurar event listeners si hay botones de exportación
+                this.configurarEventListeners();
                 
-                if (area.practicantes && area.practicantes.length > 0) {
-                    area.practicantes.forEach(p => {
-                        html += `
-                            <tr>
-                                <td>${p.NombreCompleto}</td>
-                                <td>${p.DNI}</td>
-                                <td>${p.Universidad}</td>
-                                <td><span class="badge bg-${p.Estado === 'En Proceso' ? 'success' : 'secondary'}">${p.Estado}</span></td>
-                                <td>${formatearFecha(p.FechaEntrada)}</td>
-                                <td>${formatearFecha(p.FechaSalida)}</td>
-                            </tr>
-                        `;
-                    });
-                } else {
-                    html += '<tr><td colspan="6" class="text-center">No hay practicantes en esta área</td></tr>';
+                // Ocultar resultados inicialmente
+                const resultadosDiv = document.getElementById('resultadosReporte');
+                if (resultadosDiv) {
+                    resultadosDiv.style.display = 'none';
                 }
                 
-                html += `
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            });
-        } else {
-            html += '<p class="text-center">No hay datos para mostrar</p>';
-        }
-        
-        tablaDiv.innerHTML = html;
-        resultadosDiv.classList.remove('hidden');
-        resultadosDiv.style.display = 'block';
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    function renderizarReportePorUniversidad(datos) {
-        const resultadosDiv = document.getElementById('resultadosReporte');
-        const tablaDiv = document.getElementById('tablaResultados');
-        
-        let html = `
-            <div class="reporte-header">
-                <h4>${datos.titulo}</h4>
-                <p class="text-muted">Fecha: ${new Date(datos.fecha).toLocaleString('es-PE')}</p>
-            </div>
-        `;
-        
-        if (datos.universidades && datos.universidades.length > 0) {
-            datos.universidades.forEach(uni => {
-                html += `
-                    <div class="universidad-section mb-4">
-                        <h5 class="universidad-title">${uni.Universidad}</h5>
-                        <div class="universidad-stats">
-                            <span class="badge bg-primary">Total: ${uni.TotalPracticantes}</span>
-                            <span class="badge bg-success">Vigentes: ${uni.Activos}</span>
-                            <span class="badge bg-secondary">Finalizados: ${uni.Completados}</span>
-                        </div>
-                        
-                        <div class="table-container">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>DNI</th>
-                                        <th>Carrera</th>
-                                        <th>Área</th>
-                                        <th>Estado</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                `;
+                this.initialized = true;
+                return this;
                 
-                if (uni.practicantes && uni.practicantes.length > 0) {
-                    uni.practicantes.forEach(p => {
-                        html += `
-                            <tr>
-                                <td>${p.NombreCompleto}</td>
-                                <td>${p.DNI}</td>
-                                <td>${p.Carrera}</td>
-                                <td>${p.AreaNombre || 'N/A'}</td>
-                                <td><span class="badge bg-${p.Estado === 'En Proceso' ? 'success' : 'secondary'}">${p.Estado || 'Sin asignar'}</span></td>
-                            </tr>
-                        `;
-                    });
+            } catch (error) {
+                console.error('❌ Error al inicializar módulo Reportes:', error);
+                throw error;
+            }
+        }
+
+        // ============ EVENT LISTENERS ============
+        
+        configurarEventListeners() {
+            // Los botones de reportes se manejan mediante onclick en el HTML
+            // Aquí solo configuramos los botones de exportación si existen
+            const addListener = (element, event, handler, options) => {
+                if (!element) return;
+                
+                element.addEventListener(event, handler, options);
+                
+                this.state.eventListeners.push({
+                    element,
+                    event,
+                    handler,
+                    options
+                });
+            };
+
+            // Botones de exportación (si existen en el DOM)
+            const btnExportarPDF = document.getElementById('btnExportarPDF');
+            const btnExportarExcel = document.getElementById('btnExportarExcel');
+            const btnExportarWord = document.getElementById('btnExportarWord');
+            const btnImprimir = document.getElementById('btnImprimir');
+
+            if (btnExportarPDF) addListener(btnExportarPDF, 'click', () => this.exportarPDF());
+            if (btnExportarExcel) addListener(btnExportarExcel, 'click', () => this.exportarExcel());
+            if (btnExportarWord) addListener(btnExportarWord, 'click', () => this.exportarWord());
+            if (btnImprimir) addListener(btnImprimir, 'click', () => this.imprimirReporte());
+        }
+
+        // ==================== REPORTES DE PRACTICANTES ====================
+
+        async generarReportePracticantesActivos() {
+            try {
+                this.mostrarCargando('Generando reporte de practicantes vigentes...');
+                
+                const response = await api.reportePracticantesActivos();
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'practicantes_activos';
+                    
+                    this.renderizarReportePracticantes(response.data, 'practicantes-activos');
                 } else {
-                    html += '<tr><td colspan="5" class="text-center">No hay practicantes de esta universidad</td></tr>';
+                    this.mostrarError('Error al generar el reporte');
                 }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte de practicantes vigentes');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        async generarReportePracticantesCompletados() {
+            try {
+                this.mostrarCargando('Generando reporte de prácticas completadas...');
                 
-                html += `
-                                </tbody>
-                            </table>
+                const response = await api.reportePracticantesCompletados();
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'practicantes_completados';
+                    
+                    this.renderizarReportePracticantes(response.data, 'practicantes-completados');
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte de prácticas completadas');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        async generarReportePorArea() {
+            try {
+                const areaID = await this.mostrarModalSeleccionArea();
+                
+                this.mostrarCargando('Generando reporte por área...');
+                
+                const response = await api.reportePorArea(areaID);
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'por_area';
+                    
+                    this.renderizarReportePorArea(response.data);
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte por área');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        async generarReportePorUniversidad() {
+            try {
+                this.mostrarCargando('Generando reporte por universidad...');
+                
+                const response = await api.reportePorUniversidad();
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'por_universidad';
+                    
+                    this.renderizarReportePorUniversidad(response.data);
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte por universidad');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        // ==================== REPORTES DE ASISTENCIA ====================
+
+        async generarReporteAsistenciaPracticante() {
+            try {
+                const params = await this.mostrarModalSeleccionPracticante();
+                
+                if (!params) return;
+                
+                this.mostrarCargando('Generando reporte de asistencias...');
+                
+                const response = await api.reporteAsistenciaPracticante(
+                    params.practicanteID,
+                    params.fechaInicio,
+                    params.fechaFin
+                );
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'asistencia_practicante';
+                    
+                    this.renderizarReporteAsistenciaPracticante(response.data);
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte de asistencias');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        async generarReporteAsistenciaDia() {
+            try {
+                const fecha = await this.mostrarModalSeleccionFecha() || new Date().toISOString().split('T')[0];
+                
+                this.mostrarCargando('Generando reporte del día...');
+                
+                const response = await api.reporteAsistenciaDelDia(fecha);
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'asistencia_dia';
+                    
+                    this.renderizarReporteAsistenciaDia(response.data);
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte del día');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        async generarReporteAsistenciaMensual() {
+            try {
+                const params = await this.mostrarModalSeleccionMes();
+                
+                if (!params) return;
+                
+                this.mostrarCargando('Generando reporte mensual...');
+                
+                const response = await api.reporteAsistenciaMensual(params.mes, params.anio);
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'asistencia_mensual';
+                    
+                    this.renderizarReporteAsistenciaMensual(response.data);
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte mensual');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        async generarReporteAsistenciaAnual() {
+            try {
+                const params = await this.mostrarModalSeleccionYear();
+                
+                if (!params) return;
+                
+                this.mostrarCargando('Generando reporte anual...');
+                
+                const response = await api.reporteAsistenciaAnual(params.anio);
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'asistencia_anual';
+                    
+                    this.renderizarReporteAsistenciaAnual(response.data);
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte anual');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        async generarReporteHorasAcumuladas() {
+            try {
+                this.mostrarCargando('Generando reporte de horas acumuladas...');
+                
+                const response = await api.reporteHorasAcumuladas();
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'horas_acumuladas';
+                    
+                    this.renderizarReporteHorasAcumuladas(response.data);
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte de horas acumuladas');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        // ==================== REPORTES ESTADÍSTICOS ====================
+
+        async generarReporteEstadisticasGenerales() {
+            try {
+                this.mostrarCargando('Generando estadísticas generales...');
+                
+                const response = await api.reporteEstadisticasGenerales();
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'estadisticas_generales';
+                    
+                    this.renderizarReporteEstadisticas(response.data);
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar las estadísticas generales');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        async generarReportePromedioHoras() {
+            try {
+                this.mostrarCargando('Generando reporte de promedio de horas...');
+                
+                const response = await api.reportePromedioHoras();
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'promedio_horas';
+                    
+                    this.renderizarReportePromedioHoras(response.data);
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte de promedio de horas');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        async generarReporteComparativoAreas() {
+            try {
+                this.mostrarCargando('Generando reporte comparativo de áreas...');
+                
+                const response = await api.reporteComparativoAreas();
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'comparativo_areas';
+                    
+                    this.renderizarReporteComparativoAreas(response.data);
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte comparativo de áreas');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        async generarReporteCompleto() {
+            try {
+                this.mostrarCargando('Generando reporte completo...');
+                
+                const response = await api.reporteCompleto();
+                
+                if (response.success) {
+                    this.state.datosReporteActual = response.data;
+                    this.state.tipoReporteActual = 'completo';
+                    
+                    this.renderizarReporteCompleto(response.data);
+                } else {
+                    this.mostrarError('Error al generar el reporte');
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                this.mostrarError('Error al generar el reporte completo');
+            } finally {
+                await this.ocultarCargando();
+                this.scrollToResultados();
+            }
+        }
+
+        // ==================== FUNCIONES DE RENDERIZADO ====================
+
+        renderizarReportePracticantes(datos, idSeccion) {
+            const resultadosDiv = document.getElementById('resultadosReporte');
+            const tablaDiv = document.getElementById('tablaResultados');
+            
+            if (!tablaDiv || !resultadosDiv) {
+                console.error('❌ Contenedores de reporte no encontrados');
+                return;
+            }
+            
+            let html = `
+                <div class="reporte-header">
+                    <h4>${datos.titulo}</h4>
+                    <p class="text-muted">Total de practicantes: ${datos.total}</p>
+                    <p class="text-muted">Fecha: ${new Date(datos.fecha).toLocaleString('es-PE')}</p>
+                </div>
+                
+                <div class="table-container">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nombre Completo</th>
+                                <th>DNI</th>
+                                <th>Email</th>
+                                <th>Universidad</th>
+                                <th>Carrera</th>
+                                <th>Área</th>
+                                <th>Fecha Entrada</th>
+                                <th>Fecha Salida</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            if (datos.practicantes && datos.practicantes.length > 0) {
+                datos.practicantes.forEach(p => {
+                    html += `
+                        <tr>
+                            <td>${p.NombreCompleto}</td>
+                            <td>${p.DNI}</td>
+                            <td>${p.Email}</td>
+                            <td>${p.Universidad}</td>
+                            <td>${p.Carrera}</td>
+                            <td>${p.AreaNombre || 'N/A'}</td>
+                            <td>${this.formatearFecha(p.FechaEntrada)}</td>
+                            <td>${this.formatearFecha(p.FechaSalida)}</td>
+                            <td><span class="badge bg-${p.Estado === 'Vigente' ? 'success' : 'secondary'}">${p.Estado}</span></td>
+                        </tr>
+                    `;
+                });
+            } else {
+                html += '<tr><td colspan="9" class="text-center">No hay datos para mostrar</td></tr>';
+            }
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            tablaDiv.innerHTML = html;
+            resultadosDiv.classList.remove('hidden');
+            resultadosDiv.style.display = 'block';
+        }
+
+        renderizarReportePorArea(datos) {
+            const resultadosDiv = document.getElementById('resultadosReporte');
+            const tablaDiv = document.getElementById('tablaResultados');
+            
+            if (!tablaDiv || !resultadosDiv) return;
+            
+            let html = `
+                <div class="reporte-header">
+                    <h4>${datos.titulo}</h4>
+                    <p class="text-muted">Fecha: ${new Date(datos.fecha).toLocaleString('es-PE')}</p>
+                </div>
+            `;
+            
+            if (datos.areas && datos.areas.length > 0) {
+                datos.areas.forEach(area => {
+                    html += `
+                        <div class="area-section mb-4">
+                            <h5 class="area-title">${area.AreaNombre}</h5>
+                            <div class="area-stats">
+                                <span class="badge bg-primary">Total: ${area.TotalPracticantes}</span>
+                                <span class="badge bg-success">Activos: ${area.Activos}</span>
+                                <span class="badge bg-secondary">Completados: ${area.Completados}</span>
+                            </div>
+                            
+                            <div class="table-container">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Nombre</th>
+                                            <th>DNI</th>
+                                            <th>Universidad</th>
+                                            <th>Estado</th>
+                                            <th>Fecha Entrada</th>
+                                            <th>Fecha Salida</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+                    
+                    if (area.practicantes && area.practicantes.length > 0) {
+                        area.practicantes.forEach(p => {
+                            html += `
+                                <tr>
+                                    <td>${p.NombreCompleto}</td>
+                                    <td>${p.DNI}</td>
+                                    <td>${p.Universidad}</td>
+                                    <td><span class="badge bg-${p.Estado === 'En Proceso' ? 'success' : 'secondary'}">${p.Estado}</span></td>
+                                    <td>${this.formatearFecha(p.FechaEntrada)}</td>
+                                    <td>${this.formatearFecha(p.FechaSalida)}</td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        html += '<tr><td colspan="6" class="text-center">No hay practicantes en esta área</td></tr>';
+                    }
+                    
+                    html += `
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
+                    `;
+                });
+            } else {
+                html += '<p class="text-center">No hay datos para mostrar</p>';
+            }
+            
+            tablaDiv.innerHTML = html;
+            resultadosDiv.classList.remove('hidden');
+            resultadosDiv.style.display = 'block';
+        }
+
+        renderizarReportePorUniversidad(datos) {
+            const resultadosDiv = document.getElementById('resultadosReporte');
+            const tablaDiv = document.getElementById('tablaResultados');
+            
+            if (!tablaDiv || !resultadosDiv) return;
+            
+            let html = `
+                <div class="reporte-header">
+                    <h4>${datos.titulo}</h4>
+                    <p class="text-muted">Fecha: ${new Date(datos.fecha).toLocaleString('es-PE')}</p>
+                </div>
+            `;
+            
+            if (datos.universidades && datos.universidades.length > 0) {
+                datos.universidades.forEach(uni => {
+                    html += `
+                        <div class="universidad-section mb-4">
+                            <h5 class="universidad-title">${uni.Universidad}</h5>
+                            <div class="universidad-stats">
+                                <span class="badge bg-primary">Total: ${uni.TotalPracticantes}</span>
+                                <span class="badge bg-success">Vigentes: ${uni.Activos}</span>
+                                <span class="badge bg-secondary">Finalizados: ${uni.Completados}</span>
+                            </div>
+                            
+                            <div class="table-container">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Nombre</th>
+                                            <th>DNI</th>
+                                            <th>Carrera</th>
+                                            <th>Área</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+                    
+                    if (uni.practicantes && uni.practicantes.length > 0) {
+                        uni.practicantes.forEach(p => {
+                            html += `
+                                <tr>
+                                    <td>${p.NombreCompleto}</td>
+                                    <td>${p.DNI}</td>
+                                    <td>${p.Carrera}</td>
+                                    <td>${p.AreaNombre || 'N/A'}</td>
+                                    <td><span class="badge bg-${p.Estado === 'En Proceso' ? 'success' : 'secondary'}">${p.Estado || 'Sin asignar'}</span></td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        html += '<tr><td colspan="5" class="text-center">No hay practicantes de esta universidad</td></tr>';
+                    }
+                    
+                    html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                html += '<p class="text-center">No hay datos para mostrar</p>';
+            }
+            
+            tablaDiv.innerHTML = html;
+            resultadosDiv.classList.remove('hidden');
+            resultadosDiv.style.display = 'block';
+        }
+
+        // Continuaré con los demás métodos de renderizado en la siguiente respuesta...
+        // (Por límite de caracteres)
+
+        renderizarReporteAsistenciaPracticante(datos) {
+            const resultadosDiv = document.getElementById('resultadosReporte');
+            const tablaDiv = document.getElementById('tablaResultados');
+            
+            if (!tablaDiv || !resultadosDiv) return;
+            
+            let html = `
+                <div class="reporte-header">
+                    <h4>${datos.titulo}</h4>
+                    <div class="practicante-info">
+                        <p><strong>Practicante:</strong> ${datos.practicante.NombreCompleto}</p>
+                        <p><strong>DNI:</strong> ${datos.practicante.DNI}</p>
+                        <p><strong>Universidad:</strong> ${datos.practicante.Universidad}</p>
+                        <p><strong>Área:</strong> ${datos.practicante.AreaNombre || 'N/A'}</p>
                     </div>
-                `;
-            });
-        } else {
-            html += '<p class="text-center">No hay datos para mostrar</p>';
-        }
-        
-        tablaDiv.innerHTML = html;
-        resultadosDiv.classList.remove('hidden');
-        resultadosDiv.style.display = 'block';
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    function renderizarReporteAsistenciaPracticante(datos) {
-        const resultadosDiv = document.getElementById('resultadosReporte');
-        const tablaDiv = document.getElementById('tablaResultados');
-        
-        let html = `
-            <div class="reporte-header">
-                <h4>${datos.titulo}</h4>
-                <div class="practicante-info">
-                    <p><strong>Practicante:</strong> ${datos.practicante.NombreCompleto}</p>
-                    <p><strong>DNI:</strong> ${datos.practicante.DNI}</p>
-                    <p><strong>Universidad:</strong> ${datos.practicante.Universidad}</p>
-                    <p><strong>Área:</strong> ${datos.practicante.AreaNombre || 'N/A'}</p>
+                    <div class="stats-summary">
+                        <span class="badge bg-info">Total Asistencias: ${datos.totalAsistencias}</span>
+                        <span class="badge bg-success">Total Horas: ${parseFloat(datos.totalHoras).toFixed(2)}</span>
+                    </div>
                 </div>
-                <div class="stats-summary">
-                    <span class="badge bg-info">Total Asistencias: ${datos.totalAsistencias}</span>
-                    <span class="badge bg-success">Total Horas: ${parseFloat(datos.totalHoras).toFixed(2)}</span>
+                
+                <div class="table-container">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Turno</th>
+                                <th>Hora Entrada</th>
+                                <th>Hora Salida</th>
+                                <th>Horas Trabajadas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            if (datos.asistencias && datos.asistencias.length > 0) {
+                datos.asistencias.forEach(a => {
+                    html += `
+                        <tr>
+                            <td>${this.formatearFecha(a.Fecha)}</td>
+                            <td>${a.TurnoNombre}</td>
+                            <td>${a.HoraEntrada || 'N/A'}</td>
+                            <td>${a.HoraSalida || 'En proceso'}</td>
+                            <td>${a.HorasTrabajadas ? parseFloat(a.HorasTrabajadas).toFixed(2) + ' hrs' : '-'}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                html += '<tr><td colspan="5" class="text-center">No hay asistencias registradas</td></tr>';
+            }
+            
+            html += `
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+            `;
             
-            <div class="table-container">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Turno</th>
-                            <th>Hora Entrada</th>
-                            <th>Hora Salida</th>
-                            <th>Horas Trabajadas</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        if (datos.asistencias && datos.asistencias.length > 0) {
-            datos.asistencias.forEach(a => {
-                html += `
-                    <tr>
-                        <td>${formatearFecha(a.Fecha)}</td>
-                        <td>${a.TurnoNombre}</td>
-                        <td>${a.HoraEntrada || 'N/A'}</td>
-                        <td>${a.HoraSalida || 'En proceso'}</td>
-                        <td>${a.HorasTrabajadas ? parseFloat(a.HorasTrabajadas).toFixed(2) + ' hrs' : '-'}</td>
-                    </tr>
-                `;
-            });
-        } else {
-            html += '<tr><td colspan="6" class="text-center">No hay asistencias registradas</td></tr>';
+            tablaDiv.innerHTML = html;
+            resultadosDiv.classList.remove('hidden');
+            resultadosDiv.style.display = 'block';
         }
-        
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-        
-        tablaDiv.innerHTML = html;
-        resultadosDiv.classList.remove('hidden');
-        resultadosDiv.style.display = 'block';
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
 
-    function renderizarReporteAsistenciaDia(datos) {
-        const resultadosDiv = document.getElementById('resultadosReporte');
-        const tablaDiv = document.getElementById('tablaResultados');
-        
-        let html = `
-            <div class="reporte-header">
-                <h4>${datos.titulo}</h4>
-                <p class="text-muted">Fecha: ${formatearFecha(datos.fecha)}</p>
-                <p class="text-muted">Total de practicantes: ${datos.totalPracticantes}</p>
-            </div>
+        renderizarReporteAsistenciaDia(datos) {
+            const resultadosDiv = document.getElementById('resultadosReporte');
+            const tablaDiv = document.getElementById('tablaResultados');
             
-            <div class="table-container">
-                <table class="table table-striped">
-                    <thead>
+            if (!tablaDiv || !resultadosDiv) return;
+            
+            let html = `
+                <div class="reporte-header">
+                    <h4>${datos.titulo}</h4>
+                    <p class="text-muted">Fecha: ${this.formatearFecha(datos.fecha)}</p>
+                    <p class="text-muted">Total de practicantes: ${datos.totalPracticantes}</p>
+                </div>
+                
+                <div class="table-container">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Practicante</th>
+                                <th>DNI</th>
+                                <th>Área</th>
+                                <th>Turno</th>
+                                <th>Hora Entrada</th>
+                                <th>Hora Salida</th>
+                                <th>Horas Trabajadas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            if (datos.asistencias && datos.asistencias.length > 0) {
+                datos.asistencias.forEach(a => {
+                    html += `
                         <tr>
-                            <th>Practicante</th>
-                            <th>DNI</th>
-                            <th>Área</th>
-                            <th>Turno</th>
-                            <th>Hora Entrada</th>
-                            <th>Hora Salida</th>
-                            <th>Horas Trabajadas</th>
+                            <td>${a.NombreCompleto}</td>
+                            <td>${a.DNI}</td>
+                            <td>${a.AreaNombre || 'N/A'}</td>
+                            <td>${a.TurnoNombre}</td>
+                            <td>${a.HoraEntrada}</td>
+                            <td>${a.HoraSalida || 'En proceso'}</td>
+                            <td>${a.HorasTrabajadas ? parseFloat(a.HorasTrabajadas).toFixed(2) + ' hrs' : '-'}</td>
                         </tr>
-                    </thead>
-                    <tbody>
-        `;
-        
-        if (datos.asistencias && datos.asistencias.length > 0) {
-            datos.asistencias.forEach(a => {
-                html += `
-                    <tr>
-                        <td>${a.NombreCompleto}</td>
-                        <td>${a.DNI}</td>
-                        <td>${a.AreaNombre || 'N/A'}</td>
-                        <td>${a.TurnoNombre}</td>
-                        <td>${a.HoraEntrada}</td>
-                        <td>${a.HoraSalida || 'En proceso'}</td>
-                        <td>${a.HorasTrabajadas ? parseFloat(a.HorasTrabajadas).toFixed(2) + ' hrs' : '-'}</td>
-                    </tr>
-                `;
-            });
-        } else {
-            html += '<tr><td colspan="8" class="text-center">No hay asistencias para este día</td></tr>';
+                    `;
+                });
+            } else {
+                html += '<tr><td colspan="7" class="text-center">No hay asistencias para este día</td></tr>';
+            }
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            tablaDiv.innerHTML = html;
+            resultadosDiv.classList.remove('hidden');
+            resultadosDiv.style.display = 'block';
         }
-        
-        html += `
-                    </tbody>
-                </table>
-            </div>
-        `;
-        
-        tablaDiv.innerHTML = html;
-        resultadosDiv.classList.remove('hidden');
-        resultadosDiv.style.display = 'block';
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
 
-    function renderizarReporteAsistenciaMensual(datos) {
-        const resultadosDiv = document.getElementById('resultadosReporte');
-        const tablaDiv = document.getElementById('tablaResultados');
-        
-        const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
-                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-        
-        let html = `
-            <div class="reporte-header">
-                <h4>${datos.titulo}</h4>
-                <p class="text-muted">Periodo: ${meses[datos.mes - 1]} ${datos.anio}</p>
-            </div>
+        renderizarReporteAsistenciaMensual(datos) {
+            const resultadosDiv = document.getElementById('resultadosReporte');
+            const tablaDiv = document.getElementById('tablaResultados');
             
-            <div class="table-container">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Practicante</th>
-                            <th>Área</th>
-                            <th>Días Asistidos</th>
-                            <th>Total Horas</th>
-                            <th>Promedio Diario</th>
-                        </tr>
-                    </thead>
+            if (!tablaDiv || !resultadosDiv) return;
+            
+            const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            
+            let html = `
+                <div class="reporte-header">
+                    <h4>${datos.titulo}</h4>
+                    <p class="text-muted">Periodo: ${meses[datos.mes - 1]} ${datos.anio}</p>
+                </div>
+                
+                <div class="table-container">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Practicante</th>
+                                <th>Área</th>
+                                <th>Días Asistidos</th>
+                                <th>Total Horas</th>
+                                <th>Promedio Diario</th>
+                            </tr>
+                        </thead>
                     <tbody>
         `;
         
@@ -749,12 +796,13 @@ window.initReportes = function() {
         tablaDiv.innerHTML = html;
         resultadosDiv.classList.remove('hidden');
         resultadosDiv.style.display = 'block';
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    function renderizarReporteAsistenciaAnual(datos) {
+    renderizarReporteAsistenciaAnual(datos) {
         const resultadosDiv = document.getElementById('resultadosReporte');
         const tablaDiv = document.getElementById('tablaResultados');
+        
+        if (!tablaDiv || !resultadosDiv) return;
         
         let html = `
             <div class="reporte-header">
@@ -807,13 +855,13 @@ window.initReportes = function() {
         tablaDiv.innerHTML = html;
         resultadosDiv.classList.remove('hidden');
         resultadosDiv.style.display = 'block';
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-
-    function renderizarReporteHorasAcumuladas(datos) {
+    renderizarReporteHorasAcumuladas(datos) {
         const resultadosDiv = document.getElementById('resultadosReporte');
         const tablaDiv = document.getElementById('tablaResultados');
+        
+        if (!tablaDiv || !resultadosDiv) return;
         
         let html = `
             <div class="reporte-header">
@@ -862,12 +910,13 @@ window.initReportes = function() {
         tablaDiv.innerHTML = html;
         resultadosDiv.classList.remove('hidden');
         resultadosDiv.style.display = 'block';
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    function renderizarReporteEstadisticas(datos) {
+    renderizarReporteEstadisticas(datos) {
         const resultadosDiv = document.getElementById('resultadosReporte');
         const tablaDiv = document.getElementById('tablaResultados');
+        
+        if (!tablaDiv || !resultadosDiv) return;
         
         let html = `
             <div class="reporte-header">
@@ -952,12 +1001,13 @@ window.initReportes = function() {
         tablaDiv.innerHTML = html;
         resultadosDiv.classList.remove('hidden');
         resultadosDiv.style.display = 'block';
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    function renderizarReportePromedioHoras(datos) {
+    renderizarReportePromedioHoras(datos) {
         const resultadosDiv = document.getElementById('resultadosReporte');
         const tablaDiv = document.getElementById('tablaResultados');
+        
+        if (!tablaDiv || !resultadosDiv) return;
         
         let html = `
             <div class="reporte-header">
@@ -1006,12 +1056,13 @@ window.initReportes = function() {
         tablaDiv.innerHTML = html;
         resultadosDiv.classList.remove('hidden');
         resultadosDiv.style.display = 'block';
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    function renderizarReporteComparativoAreas(datos) {
+    renderizarReporteComparativoAreas(datos) {
         const resultadosDiv = document.getElementById('resultadosReporte');
         const tablaDiv = document.getElementById('tablaResultados');
+        
+        if (!tablaDiv || !resultadosDiv) return;
         
         let html = `
             <div class="reporte-header">
@@ -1060,13 +1111,13 @@ window.initReportes = function() {
         tablaDiv.innerHTML = html;
         resultadosDiv.classList.remove('hidden');
         resultadosDiv.style.display = 'block';
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    function renderizarReporteCompleto(datos) {
-        console.log(datos);
+    renderizarReporteCompleto(datos) {
         const resultadosDiv = document.getElementById('resultadosReporte');
         const tablaDiv = document.getElementById('tablaResultados');
+        
+        if (!tablaDiv || !resultadosDiv) return;
         
         let html = `
             <div class="reporte-header">
@@ -1114,71 +1165,64 @@ window.initReportes = function() {
         
         tablaDiv.innerHTML = html;
         resultadosDiv.style.display = 'block';
-        resultadosDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     // ==================== EXPORTACIONES ====================
 
-    async function exportarPDF() {
-    if (!datosReporteActual || !tipoReporteActual) {
-        mostrarError('No hay datos de reporte para exportar');
-        return;
-    }
-    
-    try {
-        mostrarCargando('Generando PDF...');
-
-        const response = await fetch('/gestorPracticantes/public/api/reportes/exportar-pdf', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                tipoReporte: tipoReporteActual,
-                datos: datosReporteActual
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error('Error al generar el PDF');
-        }
-
-        const blob = await response.blob();
-
-        // 🔥 OCULTAMOS EL LOADING ANTES DE DESCARGAR
-        ocultarCargando();
-
-        // 🔥 Forzar actualización de la UI antes de abrir la descarga
-        await new Promise(resolve => requestAnimationFrame(resolve));
-
-        // 🔥 Lanzamos la descarga
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reporte_${tipoReporteActual}_${new Date().toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-
-        // Mensaje de éxito DESPUÉS del click
-        mostrarExito('PDF generado exitosamente');
-
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarError('Error al exportar a PDF');
-    }
-}
-
-
-    async function exportarExcel() {
-        if (!datosReporteActual || !tipoReporteActual) {
-            mostrarError('No hay datos de reporte para exportar');
+    async exportarPDF() {
+        if (!this.state.datosReporteActual || !this.state.tipoReporteActual) {
+            this.mostrarError('No hay datos de reporte para exportar');
             return;
         }
         
         try {
-            mostrarCargando('Generando Excel...');
+            this.mostrarCargando('Generando PDF...');
+
+            const response = await fetch('/gestorPracticantes/public/api/reportes/exportar-pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    tipoReporte: this.state.tipoReporteActual,
+                    datos: this.state.datosReporteActual
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al generar el PDF');
+            }
+
+            const blob = await response.blob();
+
+            await this.ocultarCargando();
+            await new Promise(resolve => requestAnimationFrame(resolve));
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `reporte_${this.state.tipoReporteActual}_${new Date().toISOString().split('T')[0]}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            this.mostrarExito('PDF generado exitosamente');
+
+        } catch (error) {
+            console.error('❌ Error:', error);
+            this.mostrarError('Error al exportar a PDF');
+        }
+    }
+
+    async exportarExcel() {
+        if (!this.state.datosReporteActual || !this.state.tipoReporteActual) {
+            this.mostrarError('No hay datos de reporte para exportar');
+            return;
+        }
+        
+        try {
+            this.mostrarCargando('Generando Excel...');
 
             const response = await fetch('/gestorPracticantes/public/api/reportes/exportar-excel', {
                 method: 'POST',
@@ -1186,8 +1230,8 @@ window.initReportes = function() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    tipoReporte: tipoReporteActual,
-                    datos: datosReporteActual
+                    tipoReporte: this.state.tipoReporteActual,
+                    datos: this.state.datosReporteActual
                 })
             });
 
@@ -1197,42 +1241,34 @@ window.initReportes = function() {
 
             const blob = await response.blob();
 
-            // ❗ Ocultamos el cargando ANTES de iniciar la descarga
-            ocultarCargando();
+            await this.ocultarCargando();
 
-            // Generar la descarga
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `reporte_${tipoReporteActual}_${new Date().toISOString().split('T')[0]}.xlsx`;
+            a.download = `reporte_${this.state.tipoReporteActual}_${new Date().toISOString().split('T')[0]}.xlsx`;
             document.body.appendChild(a);
-
-            // Forzar descarga
             a.click();
-
-            // Liberar memoria
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
 
-            // 🚀 Mostrar éxito después de que se dispara la descarga
-            mostrarExito('Excel generado exitosamente');
+            this.mostrarExito('Excel generado exitosamente');
 
         } catch (error) {
-            console.error('Error:', error);
-            ocultarCargando();
-            mostrarError('Error al exportar a Excel');
+            console.error('❌ Error:', error);
+            await this.ocultarCargando();
+            this.mostrarError('Error al exportar a Excel');
         }
     }
 
-
-    async function exportarWord() {
-        if (!datosReporteActual || !tipoReporteActual) {
-            mostrarError('No hay datos de reporte para exportar');
+    async exportarWord() {
+        if (!this.state.datosReporteActual || !this.state.tipoReporteActual) {
+            this.mostrarError('No hay datos de reporte para exportar');
             return;
         }
         
         try {
-            mostrarCargando('Generando Word...');
+            this.mostrarCargando('Generando Word...');
             
             const response = await fetch('/gestorPracticantes/public/api/reportes/exportar-word', {
                 method: 'POST',
@@ -1240,8 +1276,8 @@ window.initReportes = function() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    tipoReporte: tipoReporteActual,
-                    datos: datosReporteActual
+                    tipoReporte: this.state.tipoReporteActual,
+                    datos: this.state.datosReporteActual
                 })
             });
             
@@ -1250,38 +1286,44 @@ window.initReportes = function() {
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `reporte_${tipoReporteActual}_${new Date().toISOString().split('T')[0]}.docx`;
+                a.download = `reporte_${this.state.tipoReporteActual}_${new Date().toISOString().split('T')[0]}.docx`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
                 
-                mostrarExito('Word generado exitosamente');
+                this.mostrarExito('Word generado exitosamente');
             } else {
                 throw new Error('Error al generar el Word');
             }
         } catch (error) {
-            console.error('Error:', error);
-            mostrarError('Error al exportar a Word');
+            console.error('❌ Error:', error);
+            this.mostrarError('Error al exportar a Word');
         } finally {
-            ocultarCargando();
+            await this.ocultarCargando();
         }
     }
 
-    function imprimirReporte() {
-        if (!datosReporteActual) {
-            mostrarError('No hay datos de reporte para imprimir');
+    imprimirReporte() {
+        if (!this.state.datosReporteActual) {
+            this.mostrarError('No hay datos de reporte para imprimir');
             return;
         }
         
-        const contenido = document.getElementById('tablaResultados').innerHTML;
+        const contenido = document.getElementById('tablaResultados')?.innerHTML;
+        
+        if (!contenido) {
+            this.mostrarError('No se encontró el contenido para imprimir');
+            return;
+        }
+        
         const ventanaImpresion = window.open('', '_blank');
         
         ventanaImpresion.document.write(`
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Reporte - ${tipoReporteActual}</title>
+                <title>Reporte - ${this.state.tipoReporteActual}</title>
                 <style>
                     body {
                         font-family: Arial, sans-serif;
@@ -1290,6 +1332,18 @@ window.initReportes = function() {
                     .reporte-header {
                         text-align: center;
                         margin-bottom: 30px;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+                    th, td {
+                        border: 1px solid #ddd;
+                        padding: 8px;
+                        text-align: left;
+                    }
+                    th {
+                        background-color: #f2f2f2;
                     }
                     .badge {
                         padding: 5px 10px;
@@ -1323,13 +1377,10 @@ window.initReportes = function() {
 
     // ==================== MODALES DE SELECCIÓN ====================
 
-    async function mostrarModalSeleccionArea() {
+    async mostrarModalSeleccionArea() {
         return new Promise(async (resolve) => {
             try {
                 const areas = await api.listarAreas();
-                console.log("AREAS:", areas);
-
-                // si viene como {data: [...]} lo normalizamos
                 const listaAreas = Array.isArray(areas) ? areas : areas?.data || [];
 
                 const modalHTML = `
@@ -1360,7 +1411,11 @@ window.initReportes = function() {
                 
                 document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-                const modal = new bootstrap.Modal(document.getElementById('modalSeleccionArea'));
+                const modalElement = document.getElementById('modalSeleccionArea');
+                const modal = new bootstrap.Modal(modalElement);
+                
+                this.state.modalesAbiertos.push(modalElement);
+                
                 modal.show();
                 
                 document.getElementById('btnConfirmarArea').addEventListener('click', () => {
@@ -1369,23 +1424,25 @@ window.initReportes = function() {
                     resolve(areaID || null);
                 });
 
-                document.getElementById('modalSeleccionArea').addEventListener('hidden.bs.modal', () => {
-                    document.getElementById('modalSeleccionArea').remove();
+                modalElement.addEventListener('hidden.bs.modal', () => {
+                    modalElement.remove();
+                    const index = this.state.modalesAbiertos.indexOf(modalElement);
+                    if (index > -1) {
+                        this.state.modalesAbiertos.splice(index, 1);
+                    }
                 });
 
             } catch (error) {
-                console.error('Error:', error);
+                console.error('❌ Error:', error);
                 resolve(null);
             }
         });
     }
 
-
-    async function mostrarModalSeleccionPracticante() {
+    async mostrarModalSeleccionPracticante() {
         return new Promise(async (resolve) => {
             try {
                 const practicantes = await api.listarNombrePracticantes();
-                console.log("PRACTICANTES:", practicantes);
                 
                 const modalHTML = `
                     <div class="modal fade" id="modalSeleccionPracticante" tabindex="-1">
@@ -1422,7 +1479,12 @@ window.initReportes = function() {
                 `;
                 
                 document.body.insertAdjacentHTML('beforeend', modalHTML);
-                const modal = new bootstrap.Modal(document.getElementById('modalSeleccionPracticante'));
+                
+                const modalElement = document.getElementById('modalSeleccionPracticante');
+                const modal = new bootstrap.Modal(modalElement);
+                
+                this.state.modalesAbiertos.push(modalElement);
+                
                 modal.show();
                 
                 document.getElementById('btnConfirmarPracticante').addEventListener('click', () => {
@@ -1439,17 +1501,21 @@ window.initReportes = function() {
                     resolve({ practicanteID, fechaInicio: fechaInicio || null, fechaFin: fechaFin || null });
                 });
                 
-                document.getElementById('modalSeleccionPracticante').addEventListener('hidden.bs.modal', () => {
-                    document.getElementById('modalSeleccionPracticante').remove();
+                modalElement.addEventListener('hidden.bs.modal', () => {
+                    modalElement.remove();
+                    const index = this.state.modalesAbiertos.indexOf(modalElement);
+                    if (index > -1) {
+                        this.state.modalesAbiertos.splice(index, 1);
+                    }
                 });
             } catch (error) {
-                console.error('Error:', error);
+                console.error('❌ Error:', error);
                 resolve(null);
             }
         });
     }
 
-    async function mostrarModalSeleccionFecha() {
+    async mostrarModalSeleccionFecha() {
         return new Promise((resolve) => {
             const modalHTML = `
                 <div class="modal fade" id="modalSeleccionFecha" tabindex="-1">
@@ -1462,20 +1528,24 @@ window.initReportes = function() {
                             <div class="modal-body">
                                 <div class="form-group">
                                     <label>Fecha (Por defecto: Hoy)</label>
-                                    <input type="date" class="form-control" id="inputFecha" value="${new Date().toISOString().split('T')[0]}">
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="button" class="btn btn-primary" id="btnConfirmarFecha">Generar Reporte</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
+<input type="date" class="form-control" id="inputFecha" value="${new Date().toISOString().split('T')[0]}">
+</div>
+</div>
+<div class="modal-footer">
+<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+<button type="button" class="btn btn-primary" id="btnConfirmarFecha">Generar Reporte</button>
+</div>
+</div>
+</div>
+</div>
+`;
             document.body.insertAdjacentHTML('beforeend', modalHTML);
-            const modal = new bootstrap.Modal(document.getElementById('modalSeleccionFecha'));
+            
+            const modalElement = document.getElementById('modalSeleccionFecha');
+            const modal = new bootstrap.Modal(modalElement);
+            
+            this.state.modalesAbiertos.push(modalElement);
+            
             modal.show();
             
             document.getElementById('btnConfirmarFecha').addEventListener('click', () => {
@@ -1484,13 +1554,17 @@ window.initReportes = function() {
                 resolve(fecha);
             });
             
-            document.getElementById('modalSeleccionFecha').addEventListener('hidden.bs.modal', () => {
-                document.getElementById('modalSeleccionFecha').remove();
+            modalElement.addEventListener('hidden.bs.modal', () => {
+                modalElement.remove();
+                const index = this.state.modalesAbiertos.indexOf(modalElement);
+                if (index > -1) {
+                    this.state.modalesAbiertos.splice(index, 1);
+                }
             });
         });
     }
 
-    async function mostrarModalSeleccionMes() {
+    async mostrarModalSeleccionMes() {
         return new Promise((resolve) => {
             const fechaActual = new Date();
             const mesActual = fechaActual.getMonth() + 1;
@@ -1537,7 +1611,12 @@ window.initReportes = function() {
             `;
             
             document.body.insertAdjacentHTML('beforeend', modalHTML);
-            const modal = new bootstrap.Modal(document.getElementById('modalSeleccionMes'));
+            
+            const modalElement = document.getElementById('modalSeleccionMes');
+            const modal = new bootstrap.Modal(modalElement);
+            
+            this.state.modalesAbiertos.push(modalElement);
+            
             modal.show();
             
             document.getElementById('btnConfirmarMes').addEventListener('click', () => {
@@ -1547,13 +1626,17 @@ window.initReportes = function() {
                 resolve({ mes, anio });
             });
             
-            document.getElementById('modalSeleccionMes').addEventListener('hidden.bs.modal', () => {
-                document.getElementById('modalSeleccionMes').remove();
+            modalElement.addEventListener('hidden.bs.modal', () => {
+                modalElement.remove();
+                const index = this.state.modalesAbiertos.indexOf(modalElement);
+                if (index > -1) {
+                    this.state.modalesAbiertos.splice(index, 1);
+                }
             });
         });
     }
 
-    async function mostrarModalSeleccionYear() {
+    async mostrarModalSeleccionYear() {
         return new Promise((resolve) => {
             const fechaActual = new Date();
             const anioActual = fechaActual.getFullYear();
@@ -1567,8 +1650,6 @@ window.initReportes = function() {
                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                             </div>
                             <div class="modal-body">
-                                <div class="form-group mb-3">
-                                </div>
                                 <div class="form-group">
                                     <label>Año</label>
                                     <input type="number" class="form-control" id="inputAnio" value="${anioActual}" min="2020" max="${anioActual + 1}">
@@ -1584,7 +1665,12 @@ window.initReportes = function() {
             `;
             
             document.body.insertAdjacentHTML('beforeend', modalHTML);
-            const modal = new bootstrap.Modal(document.getElementById('modalSeleccionYear'));
+            
+            const modalElement = document.getElementById('modalSeleccionYear');
+            const modal = new bootstrap.Modal(modalElement);
+            
+            this.state.modalesAbiertos.push(modalElement);
+            
             modal.show();
             
             document.getElementById('btnConfirmarYear').addEventListener('click', () => {
@@ -1593,29 +1679,34 @@ window.initReportes = function() {
                 resolve({ anio });
             });
             
-            document.getElementById('modalSeleccionYear').addEventListener('hidden.bs.modal', () => {
-                document.getElementById('modalSeleccionYear').remove();
+            modalElement.addEventListener('hidden.bs.modal', () => {
+                modalElement.remove();
+                const index = this.state.modalesAbiertos.indexOf(modalElement);
+                if (index > -1) {
+                    this.state.modalesAbiertos.splice(index, 1);
+                }
             });
         });
     }
 
-    // ==================== FUNCIONES AUXILIARES ====================
+    // ==================== UTILIDADES ====================
 
-    function formatearFecha(fecha) {
+    formatearFecha(fecha) {
         if (!fecha) return 'N/A';
-        const date = new Date(fecha);
-        return date.toLocaleDateString('es-PE', { 
-            year: 'numeric', 
-            month: '2-digit', 
-            day: '2-digit' 
-        });
+        try {
+            const date = new Date(fecha);
+            return date.toLocaleDateString('es-PE', { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit' 
+            });
+        } catch (error) {
+            return fecha;
+        }
     }
 
-    let cargandoDesde = null;
-    const MIN_TIEMPO = 1500; // 1.5 segundos
-
-    function mostrarCargando(mensaje = 'Cargando...') {
-        cargandoDesde = Date.now();
+    mostrarCargando(mensaje = 'Cargando...') {
+        this.state.cargandoDesde = Date.now();
 
         if (typeof Swal !== 'undefined') {
             Swal.fire({
@@ -1623,25 +1714,22 @@ window.initReportes = function() {
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading()
             });
-        } else {
-            console.log(mensaje);
         }
     }
 
-    function ocultarCargando() {
+    ocultarCargando() {
         return new Promise(resolve => {
-            const tiempoTranscurrido = Date.now() - cargandoDesde;
+            const tiempoTranscurrido = Date.now() - this.state.cargandoDesde;
 
-            if (tiempoTranscurrido < MIN_TIEMPO) {
+            if (tiempoTranscurrido < MIN_TIEMPO_CARGA) {
                 setTimeout(() => {
-                    ocultarCargando().then(resolve);
-                }, MIN_TIEMPO - tiempoTranscurrido);
+                    this.ocultarCargando().then(resolve);
+                }, MIN_TIEMPO_CARGA - tiempoTranscurrido);
                 return;
             }
 
             if (typeof Swal !== 'undefined') {
                 Swal.close();
-                // Esperar a que la animación de cierre termine
                 setTimeout(resolve, 300);
             } else {
                 resolve();
@@ -1649,9 +1737,7 @@ window.initReportes = function() {
         });
     }
 
-
-    function mostrarExito(mensaje) {
-        // Implementar según tu sistema de notificaciones
+    mostrarExito(mensaje) {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 icon: 'success',
@@ -1665,8 +1751,7 @@ window.initReportes = function() {
         }
     }
 
-    function mostrarError(mensaje) {
-        // Implementar según tu sistema de notificaciones
+    mostrarError(mensaje) {
         if (typeof Swal !== 'undefined') {
             Swal.fire({
                 icon: 'error',
@@ -1678,25 +1763,182 @@ window.initReportes = function() {
         }
     }
 
-    window.generarReportePracticantesActivos = generarReportePracticantesActivos;
-    window.generarReporteAsistenciaAnual = generarReporteAsistenciaAnual;
-    window.generarReporteAsistenciaMensual = generarReporteAsistenciaMensual;
-    window.generarReporteAsistenciaDia = generarReporteAsistenciaDia;
-    window.generarReporteAsistenciaPracticante = generarReporteAsistenciaPracticante;
-    window.generarReporteComparativoAreas = generarReporteComparativoAreas;
-    window.generarReporteCompleto = generarReporteCompleto;
-    window.generarReporteEstadisticasGenerales = generarReporteEstadisticasGenerales;
-    window.generarReporteHorasAcumuladas = generarReporteHorasAcumuladas;
-    window.generarReportePorArea = generarReportePorArea;
-    window.generarReportePorUniversidad = generarReportePorUniversidad;
-    window.generarReportePracticantesCompletados = generarReportePracticantesCompletados;
-    window.generarReportePromedioHoras = generarReportePromedioHoras;
+    scrollToResultados() {
+        const resultados = document.getElementById('resultadosReporte');
+        if (resultados && resultados.style.display !== 'none') {
+            resultados.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
 
-    window.exportarExcel = exportarExcel;
-    window.exportarPDF = exportarPDF;
-    window.exportarWord = exportarWord;
-    window.imprimirReporte = imprimirReporte;
+    // ============ API PÚBLICA ============
+    
+    async recargar() {
+        // Limpiar resultados si el módulo se recarga
+        const resultadosDiv = document.getElementById('resultadosReporte');
+        if (resultadosDiv) {
+            resultadosDiv.style.display = 'none';
+        }
+        
+        this.state.datosReporteActual = null;
+        this.state.tipoReporteActual = null;
+    }
 
+    obtenerDatosActuales() {
+        return {
+            datos: this.state.datosReporteActual,
+            tipo: this.state.tipoReporteActual
+        };
+    }
+
+    // ============ LIMPIEZA ============
+    
+    async destroy() {
+
+        try {
+            // Limpiar event listeners
+            this.state.eventListeners.forEach(({ element, event, handler, options }) => {
+                if (element) {
+                    element.removeEventListener(event, handler, options);
+                }
+            });
+            this.state.eventListeners = [];
+
+            // Cerrar modales abiertos
+            this.state.modalesAbiertos.forEach(modal => {
+                if (modal && modal.parentElement) {
+                    modal.remove();
+                }
+            });
+            this.state.modalesAbiertos = [];
+
+            // Limpiar estado
+            this.state.datosReporteActual = null;
+            this.state.tipoReporteActual = null;
+            this.state.cargandoDesde = null;
+
+            // Ocultar resultados
+            const resultadosDiv = document.getElementById('resultadosReporte');
+            if (resultadosDiv) {
+                resultadosDiv.style.display = 'none';
+            }
+
+            // Marcar como no inicializado
+            this.initialized = false;
+
+        } catch (error) {
+            console.error('❌ Error al limpiar módulo Reportes:', error);
+        }
+    }
+}
+
+// ==================== REGISTRO DEL MÓDULO ====================
+
+const moduleDefinition = {
+    async init() {
+        const instance = new ReportesModule();
+        await instance.init();
+        return instance;
+    },
+    
+    async destroy(instance) {
+        if (instance && instance.destroy) {
+            await instance.destroy();
+        }
+    }
 };
 
-
+if (window.moduleManager) {
+    window.moduleManager.register(MODULE_NAME, moduleDefinition);
+    
+    // Exponer métodos globalmente para los onclick en el HTML
+    const instance = new ReportesModule();
+    
+    window.generarReportePracticantesActivos = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReportePracticantesActivos();
+    };
+    
+    window.generarReportePracticantesCompletados = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReportePracticantesCompletados();
+    };
+    
+    window.generarReportePorArea = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReportePorArea();
+    };
+    
+    window.generarReportePorUniversidad = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReportePorUniversidad();
+    };
+    
+    window.generarReporteAsistenciaPracticante = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReporteAsistenciaPracticante();
+    };
+    
+    window.generarReporteAsistenciaDia = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReporteAsistenciaDia();
+    };
+    
+    window.generarReporteAsistenciaMensual = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReporteAsistenciaMensual();
+    };
+    
+    window.generarReporteAsistenciaAnual = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReporteAsistenciaAnual();
+    };
+    
+    window.generarReporteHorasAcumuladas = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReporteHorasAcumuladas();
+    };
+    
+    window.generarReporteEstadisticasGenerales = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReporteEstadisticasGenerales();
+    };
+    
+    window.generarReportePromedioHoras = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReportePromedioHoras();
+    };
+    
+    window.generarReporteComparativoAreas = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReporteComparativoAreas();
+    };
+    
+    window.generarReporteCompleto = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.generarReporteCompleto();
+    };
+    
+    window.exportarPDF = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.exportarPDF();
+    };
+    
+    window.exportarExcel = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.exportarExcel();
+    };
+    
+    window.exportarWord = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.exportarWord();
+    };
+    
+    window.imprimirReporte = () => {
+        const mod = window.moduleManager.getInstance(MODULE_NAME);
+        if (mod) mod.imprimirReporte();
+    };
+    
+} else {
+    console.error('❌ ModuleManager no está disponible para módulo Reportes');
+}
+})();

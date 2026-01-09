@@ -298,11 +298,11 @@ class SolicitudService extends BaseService {
             }
         }
 
-        // Obtener EstadoID para "Pendiente"
-        $estadoID = $this->estadoRepo->obtenerEstadoIDPorAbreviatura('PEN');
+        // Obtener EstadoID para "En Revision"
+        $estadoID = $this->estadoRepo->obtenerEstadoIDPorAbreviatura('REV');
 
         if (!$estadoID) {
-            throw new \Exception('Estado "Pendiente" no encontrado en la base de datos');
+            throw new \Exception('Estado "En Revision" no encontrado en la base de datos');
         }
 
         // Crear nueva solicitud

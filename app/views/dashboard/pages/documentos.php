@@ -57,7 +57,7 @@
     <div class="modal-content-custom">
         <div class="modal-header-custom">
             <h2>Subir Documentos del Practicante</h2>
-            <button class="close" onclick="closeModal('modalSubirDocumento')">&times;</button>
+            <button class="close">&times;</button>
         </div>
         <div class="modal-body-custom">
             <form id="formSubirDocumentos" enctype="multipart/form-data">
@@ -130,7 +130,7 @@
                     <button type="submit" class="btn-success hidden" id="btnGuardarDocumentos">
                         <i class="fas fa-save"></i> Guardar Documentos
                     </button>
-                    <button type="button" class="btn-cancel" onclick="closeModal('modalSubirDocumento')">
+                    <button type="button" class="btn-cancel">
                         Cancelar
                     </button>
                 </div>
@@ -190,11 +190,11 @@
         <div class="mensaje-estado" id="mensajeEstadoCarta"></div>
 
         <div class="dialog-buttons">
-            <button class="btn btn-secondary" id="btnCancelarCarta" onclick="cerrarDialogCarta()">
+            <button class="btn btn-secondary" id="btnCancelarCarta">
                 <i class="fas fa-times"></i>
                 Cancelar
             </button>
-            <button class="btn btn-primary" id="btnGenerarCarta">
+            <button class="btn btn-primary" id="btnGenerarCartaDialog">
                 <i class="fas fa-download"></i>
                 Generar Carta
             </button>

@@ -49,7 +49,6 @@ document.addEventListener('DOMContentLoaded', function() {
             usuarioID = sessionStorage.getItem('usuarioID');
             const response = await api.validarCUI(usuarioID, cui);
             if (response.success) {
-                console.log('Validación CUI exitosa:', response.data);
                 
                 // Renovar datos del usuario desde la respuesta del servidor
                 if (response.data && response.data.area) {
@@ -71,7 +70,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Limpiar la página guardada para que cargue con página por defecto en dashboard
                 localStorage.removeItem('currentPage');
-                alert('CUI validado correctamente. Bienvenido al sistema.');
                 window.location.href = 'dashboard';
             }
         } catch (error) {

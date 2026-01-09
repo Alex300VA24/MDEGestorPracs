@@ -105,10 +105,10 @@
                     </select>
                 </div>
                 <!-- Botón Aplicar -->
-                <button class="btn-primary" onclick="aplicarFiltrosUsuarios()" type="button">
+                <!-- <button class="btn-primary"type="button">
                     <i class="fas fa-filter"></i>
                     Aplicar Filtros
-                </button>
+                </button> -->
             </div>
         </div>
     </div>
@@ -167,7 +167,7 @@
                 <i class="fas fa-user-plus"></i>
                 Nuevo Usuario
             </h3>
-            <button class="close" onclick="cerrarModalUsuario()" type="button">
+            <button class="close" id="btnCerrarModalUsuario" type="button">
                 &times;
             </button>
         </div>
@@ -355,9 +355,8 @@
                 </div>
 
                 <div class="modal-footer-custom">
-                    <button type="button" 
-                            onclick="cerrarModalUsuario()" 
-                            class="btn btn-secondary">
+                    <button type="button"  
+                            class="btn btn-secondary" id="btnCancelarUsuario">
                         <i class="fas fa-times"></i>
                         Cancelar
                     </button>
@@ -380,7 +379,7 @@
                 <i class="fas fa-key"></i>
                 Cambiar Contraseña
             </h3>
-            <button class="close" onclick="cerrarModalPassword()" type="button">
+            <button class="close" id="btnCerrarModalPassword" type="button">
                 &times;
             </button>
         </div>
@@ -444,7 +443,7 @@
                 </div>
                 <div class="modal-footer-custom">
                 <button type="button" 
-                        onclick="cerrarModalPassword()" 
+                        id="btnCancelarPassword" 
                         class="btn btn-secondary">
                     <i class="fas fa-times"></i>
                     Cancelar

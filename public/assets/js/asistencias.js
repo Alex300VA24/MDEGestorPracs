@@ -1,19 +1,13 @@
-window.initAsistencias = function() {
-    console.log("Asistencias iniciado");
-    const inicializar = async () => {
-        cargarAsistencias();
-        inicializarModal();
-    };
-    // Verificar si el DOM ya está cargado o esperar al evento
-    if (document.readyState === 'loading') {
-        // DOM aún no está listo, esperar al evento
-        document.addEventListener('DOMContentLoaded', inicializar);
-    } else {
-        // DOM ya está listo, ejecutar inmediatamente
-        inicializar();
-    }
+// asistencias.js - Refactorizado con lifecycle management
 
-    // Configuración de turnos
+(function() {
+    'use strict';
+
+    // ==================== CONFIGURACIÓN DEL MÓDULO ====================
+    
+    const MODULE_NAME = 'asistencias';
+    
+    // Constantes de turnos
     const TURNOS = {
         MANANA: {
             id: 1,
@@ -36,61 +30,116 @@ window.initAsistencias = function() {
             salidaMaxima: '16:45:00'
         }
     };
-    function esHoy(fecha) {
-        const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0); // Resetear horas para comparar solo fechas
-        
-        // Extraer año, mes y día de la fecha string (formato: YYYY-MM-DD)
-        const partes = fecha.split('-');
-        const fechaComparar = new Date(partes[0], partes[1] - 1, partes[2]);
-        fechaComparar.setHours(0, 0, 0, 0);
-        
-        return hoy.getTime() === fechaComparar.getTime();
-    }
+
+    // Estado privado del módulo
+    let moduleState = {
+        cronometroInterval: null,
+        tiempoInicio: null,
+        tiempoPausadoTotal: 0,
+        asistenciaActual: null,
+        pausaActivaInicio: null,
+        eventListeners: [],
+        asistenciasCache: null
+    };
+
+    // ==================== CLASE PRINCIPAL DEL MÓDULO ====================
     
+    class AsistenciasModule {
+        constructor() {
+            this.state = moduleState;
+            this.initialized = false;
+        }
 
-    let cronometroInterval = null;
-    let tiempoInicio = null;
-    let tiempoPausadoTotal = 0;
-    let asistenciaActual = null;
-    let pausaActivaInicio = null;
-
-    async function cargarAsistencias() {
-        try {
-            const areaID = sessionStorage.getItem('areaID');
-            if (!areaID) {
-                console.warn("⚠️ No se encontró área del usuario.");
-                mostrarAlerta({
-                    tipo: 'warning',
-                    titulo: 'Área no encontrada',
-                    mensaje: 'No se pudo identificar tu área de trabajo. Por favor, vuelve a iniciar sesión.'
-                });
-                return;
+        // ============ INICIALIZACIÓN ============
+        
+        async init() {
+            if (this.initialized) {
+                console.warn('⚠️ Módulo Asistencias ya inicializado');
+                return this;
             }
 
-            const payload = { areaID: parseInt(areaID) };
-
-            const fecha = document.getElementById('fechaFiltro').value;
-            
-            // Agregar filtros de fecha si existen
-            if (fecha) {
-                payload.fecha = fecha;
+            try {
+                // Inicializar modal
+                this.inicializarModal();
                 
+                // Cargar datos iniciales
+                await this.cargarAsistencias();
+                
+                // Configurar event listeners
+                this.configurarEventListeners();
+                
+                // Marcar como inicializado
+                this.initialized = true;
+                
+                return this;
+                
+            } catch (error) {
+                console.error('❌ Error al inicializar módulo Asistencias:', error);
+                throw error;
             }
+        }
 
-            const response = await api.listarAsistencias(payload);
+        // ============ CARGAR DATOS ============
+        
+        async cargarAsistencias() {
+            try {
+                const areaID = sessionStorage.getItem('areaID');
+                if (!areaID) {
+                    console.warn('⚠️ No se encontró área del usuario.');
+                    mostrarAlerta({
+                        tipo: 'warning',
+                        titulo: 'Área no encontrada',
+                        mensaje: 'No se pudo identificar tu área de trabajo. Por favor, vuelve a iniciar sesión.'
+                    });
+                    return;
+                }
 
-            if (!response || !response.success || !Array.isArray(response.data)) {
-                console.error("Error: formato de datos inválido", response);
+                const payload = { areaID: parseInt(areaID) };
+
+                const fecha = document.getElementById('fechaFiltro')?.value;
+                if (fecha) {
+                    payload.fecha = fecha;
+                }
+
+                const response = await api.listarAsistencias(payload);
+
+                if (!response || !response.success || !Array.isArray(response.data)) {
+                    console.error('Error: formato de datos inválido', response);
+                    return;
+                }
+
+                this.state.asistenciasCache = response.data;
+                this.renderizarTablaAsistencias(response.data);
+                this.actualizarStats(response.data);
+
+            } catch (error) {
+                console.error('❌ Error al cargar asistencias:', error);
+                mostrarAlerta({
+                    tipo: 'error',
+                    titulo: 'Error',
+                    mensaje: error.message || 'Error al cargar las asistencias'
+                });
+            }
+        }
+
+        // ============ RENDERIZAR TABLA ============
+        
+        renderizarTablaAsistencias(asistencias) {
+            const tbody = document.getElementById('tableAsistenciasBody');
+            
+            if (!tbody) {
+                console.warn('⚠️ Tabla de asistencias no encontrada');
                 return;
             }
 
-            const asistencias = response.data;
-            const tbody = document.getElementById('tableAsistenciasBody');
             tbody.innerHTML = '';
 
             if (asistencias.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="text-center">No hay practicantes vigentes en tu área</td></tr>`;
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center">No hay practicantes vigentes en tu área</td>
+                    </tr>
+                `;
                 return;
             }
 
@@ -99,7 +148,7 @@ window.initAsistencias = function() {
 
                 let duracion = '-';
                 if (row.HoraEntrada && row.HoraSalida) {
-                    duracion = calcularDuracionConPausas(row);
+                    duracion = this.calcularDuracionConPausas(row);
                 } else if (row.HoraEntrada) {
                     duracion = 'En curso';
                 }
@@ -107,11 +156,11 @@ window.initAsistencias = function() {
                 const turnos = row.Turnos ? row.Turnos.split(',').join(', ') : (row.Turno || '-');
 
                 const f = new Date(row.Fecha);
-                fechaFormateada = `${String(f.getDate()).padStart(2,'0')}-${String(f.getMonth()+1).padStart(2,'0')}-${f.getFullYear()}`;
+                const fechaFormateada = `${String(f.getDate()).padStart(2,'0')}-${String(f.getMonth()+1).padStart(2,'0')}-${f.getFullYear()}`;
 
-                const permitirRegistro = esHoy(row.Fecha);
+                const permitirRegistro = this.esHoy(row.Fecha);
                 
-                // Validar si la fecha de inicio de prácticas es posterior a hoy
+                // Validar fecha de inicio de prácticas
                 const hoy = new Date();
                 hoy.setHours(0, 0, 0, 0);
                 let fechaInicioPosterior = false;
@@ -134,9 +183,10 @@ window.initAsistencias = function() {
                     <td>${row.HoraEntrada || '-'}</td>
                     <td>${row.HoraSalida || '-'}</td>
                     <td>${duracion}</td>
-                    <td><span class="badge badge-${getBadgeClass(row.Estado)}">${row.Estado}</span></td>
+                    <td><span class="badge badge-${this.getBadgeClass(row.Estado)}">${row.Estado}</span></td>
                     <td>
-                        <button class="btn-primary" ${btnDisabled} title="${btnTitle}" onclick='abrirModalAsistencia(${row.PracticanteID}, "${row.NombreCompleto}", "${row.Fecha}", "${row.FechaInicioPracticas || ''}")'>
+                        <button class="btn-primary" ${btnDisabled} title="${btnTitle}" 
+                                onclick='asistenciasModule.abrirModalAsistencia(${row.PracticanteID}, "${row.NombreCompleto}", "${row.Fecha}", "${row.FechaInicioPracticas || ''}")'>
                             <i class="fas fa-clock"></i> Registrar
                         </button>
                     </td>
@@ -144,58 +194,21 @@ window.initAsistencias = function() {
 
                 tbody.appendChild(tr);
             });
-
-            
-
-            actualizarStats(asistencias);
-
-        } catch (err) {
-            console.error("Error al cargar asistencias:", err);
-            mostrarAlerta({
-                tipo: 'error',
-                titulo: 'Error',
-                mensaje: err.message || 'Error al cargar las asistencias'
-            });
-        }
-    }
-
-    function calcularDuracionConPausas(row) {
-        if (!row.HoraEntrada || !row.HoraSalida) return '-';
-        
-        const entrada = new Date(`1970-01-01T${row.HoraEntrada}`);
-        const salida = new Date(`1970-01-01T${row.HoraSalida}`);
-        let diffMs = salida - entrada;
-
-        if (row.TiempoPausas) {
-            diffMs -= row.TiempoPausas * 1000;
         }
 
-        if (diffMs < 0) diffMs = 0;
-
-        const horas = Math.floor(diffMs / (1000 * 60 * 60));
-        const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-        const segundos = Math.floor((diffMs % (1000 * 60)) / 1000);
+        // ============ INICIALIZAR MODAL ============
         
-        return `${horas}h ${minutos}m ${segundos}s`;
-    }
+        inicializarModal() {
+            if (document.getElementById('modalAsistencia')) {
+                return;
+            }
 
-    function getBadgeClass(estado) {
-        const clases = {
-            'Presente': 'success',
-            'Ausente': 'danger',
-            'En curso': 'info'
-        };
-        return clases[estado] || 'secondary';
-    }
-
-    function inicializarModal() {
-        if (!document.getElementById('modalAsistencia')) {
             const modalHTML = `
                 <div id="modalAsistencia" class="modal-asistencia">
                     <div class="modal-asistencia-content">
                         <div class="modal-asistencia-header">
                             <h2 id="modalTitulo">Control de Asistencia</h2>
-                            <span class="close" onclick="cerrarModal()">&times;</span>
+                            <span class="close" onclick="asistenciasModule.cerrarModal()">&times;</span>
                         </div>
                         <div class="modal-asistencia-body">
                             <div class="practicante-info">
@@ -236,13 +249,13 @@ window.initAsistencias = function() {
                             </div>
 
                             <div class="modal-asistencia-actions">
-                                <button class="btn-success" id="btnRegistrarEntrada" onclick="registrarEntrada()">
+                                <button class="btn-success" id="btnRegistrarEntrada" onclick="asistenciasModule.registrarEntrada()">
                                     <i class="fas fa-sign-in-alt"></i> Registrar Entrada
                                 </button>
-                                <button class="btn-warning" id="btnPausa" onclick="togglePausa()" style="display:none;">
+                                <button class="btn-warning" id="btnPausa" onclick="asistenciasModule.togglePausa()" style="display:none;">
                                     <i class="fas fa-pause"></i> Pausar
                                 </button>
-                                <button class="btn-danger" id="btnRegistrarSalida" onclick="registrarSalida()" style="display:none;">
+                                <button class="btn-danger" id="btnRegistrarSalida" onclick="asistenciasModule.registrarSalida()" style="display:none;">
                                     <i class="fas fa-sign-out-alt"></i> Registrar Salida
                                 </button>
                             </div>
@@ -250,10 +263,51 @@ window.initAsistencias = function() {
                     </div>
                 </div>
             `;
+            
             document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
 
-        document.getElementById('checkHoraManual').addEventListener('change', (e) => {
+        // ============ EVENT LISTENERS ============
+        
+        configurarEventListeners() {
+            const addListener = (element, event, handler, options) => {
+                if (!element) return;
+                
+                element.addEventListener(event, handler, options);
+                
+                this.state.eventListeners.push({
+                    element,
+                    event,
+                    handler,
+                    options
+                });
+            };
+
+            // Checkbox hora manual
+            const checkHoraManual = document.getElementById('checkHoraManual');
+            addListener(checkHoraManual, 'change', (e) => this.handleHoraManualChange(e));
+
+            // Input hora manual
+            const inputHoraManual = document.getElementById('inputHoraManual');
+            addListener(inputHoraManual, 'change', (e) => this.handleHoraManualInput(e));
+
+            // Click fuera del modal
+            addListener(window, 'click', (e) => {
+                const modal = document.getElementById('modalAsistencia');
+                if (e.target === modal) {
+                    this.cerrarModal();
+                }
+            });
+
+            // Para btn filtrar y limpiar filtros
+            const btnFiltrar = document.getElementById('btnFiltrarFecha');
+            addListener(btnFiltrar, 'click', () => this.filtrarPorFecha());
+
+            const btnLimpiar = document.getElementById('btnLimpiarFiltros');
+            addListener(btnLimpiar, 'click', () => this.limpiarFiltros());
+        }
+
+        handleHoraManualChange(e) {
             const inputHora = document.getElementById('inputHoraManual');
             const radiosTurno = document.querySelectorAll('input[name="turno"]');
             
@@ -271,9 +325,9 @@ window.initAsistencias = function() {
                     document.querySelector('input[name="turno"][value="1"]').checked = true;
                 }
             }
-        });
+        }
 
-        document.getElementById('inputHoraManual').addEventListener('change', (e) => {
+        handleHoraManualInput(e) {
             const horaSeleccionada = e.target.value;
             if (horaSeleccionada) {
                 if (horaSeleccionada >= TURNOS.TARDE.horaInicio) {
@@ -282,534 +336,738 @@ window.initAsistencias = function() {
                     document.querySelector('input[name="turno"][value="1"]').checked = true;
                 }
             }
-        });
-    }
+        }
 
-    // ============================================
-    // ABRIR MODAL CON CARGA DESDE API
-    // ============================================
-    async function abrirModalAsistencia(practicanteID, nombreCompleto, fecha, fechaInicioPracticas = '') {
-        try {
-
-            if (fecha && !esHoy(fecha)) {
-                mostrarAlerta({
-                    tipo: 'warning', 
-                    titulo: 'Día no válido', 
-                    mensaje: 'Solo se puede registrar asistencia el día actual'
-                });
-                return;
-            }
-            
-            // Validar si la fecha de inicio de prácticas es posterior a hoy
-            if (fechaInicioPracticas) {
-                const hoy = new Date();
-                hoy.setHours(0, 0, 0, 0);
-                const partesFecha = fechaInicioPracticas.split('-');
-                const fechaInicio = new Date(partesFecha[0], partesFecha[1] - 1, partesFecha[2]);
-                fechaInicio.setHours(0, 0, 0, 0);
-                
-                if (fechaInicio > hoy) {
+        // ============ ABRIR MODAL ============
+        
+        async abrirModalAsistencia(practicanteID, nombreCompleto, fecha, fechaInicioPracticas = '') {
+            try {
+                if (fecha && !this.esHoy(fecha)) {
                     mostrarAlerta({
-                        tipo: 'warning', 
-                        titulo: 'Prácticas no iniciadas', 
-                        mensaje: `No se puede registrar asistencia. La fecha de inicio de prácticas (${fechaInicioPracticas}) es posterior a la fecha actual.`
+                        tipo: 'warning',
+                        titulo: 'Día no válido',
+                        mensaje: 'Solo se puede registrar asistencia el día actual'
                     });
                     return;
                 }
-            }
-            // Resetear estado anterior antes de abrir
-            resetearEstadoModal();
-            
-            const modal = document.getElementById('modalAsistencia');
-            document.getElementById('nombrePracticante').textContent = nombreCompleto;
-            
-            // 🔥 OBTENER DATOS ACTUALIZADOS DESDE LA API
-            const response = await api.obtenerAsistenciaCompleta(practicanteID);
-            
-            if (!response.success) {
-                console.error("Error al obtener asistencia:", response.message);
-                mostrarModoEntrada();
-                asistenciaActual = {
+                
+                // Validar fecha de inicio de prácticas
+                if (fechaInicioPracticas) {
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    const partesFecha = fechaInicioPracticas.split('-');
+                    const fechaInicio = new Date(partesFecha[0], partesFecha[1] - 1, partesFecha[2]);
+                    fechaInicio.setHours(0, 0, 0, 0);
+                    
+                    if (fechaInicio > hoy) {
+                        mostrarAlerta({
+                            tipo: 'warning',
+                            titulo: 'Prácticas no iniciadas',
+                            mensaje: `No se puede registrar asistencia. La fecha de inicio de prácticas (${fechaInicioPracticas}) es posterior a la fecha actual.`
+                        });
+                        return;
+                    }
+                }
+
+                // Resetear estado anterior
+                this.resetearEstadoModal();
+                
+                const modal = document.getElementById('modalAsistencia');
+                document.getElementById('nombrePracticante').textContent = nombreCompleto;
+                
+                // Obtener datos desde la API
+                const response = await api.obtenerAsistenciaCompleta(practicanteID);
+                
+                if (!response.success) {
+                    console.error('Error al obtener asistencia:', response.message);
+                    this.mostrarModoEntrada();
+                    this.state.asistenciaActual = {
+                        practicanteID: practicanteID,
+                        asistenciaID: null,
+                        horaEntrada: null,
+                        horaSalida: null,
+                        pausaActiva: false,
+                        pausaID: null,
+                        pausas: []
+                    };
+                    modal.style.display = 'block';
+                    return;
+                }
+
+                const datosAsistencia = response.data;
+                
+                // Configurar estado actual
+                this.state.asistenciaActual = {
                     practicanteID: practicanteID,
-                    asistenciaID: null,
-                    horaEntrada: null,
-                    horaSalida: null,
+                    asistenciaID: datosAsistencia ? datosAsistencia.AsistenciaID : null,
+                    horaEntrada: datosAsistencia ? datosAsistencia.HoraEntrada : null,
+                    horaSalida: datosAsistencia ? datosAsistencia.HoraSalida : null,
                     pausaActiva: false,
                     pausaID: null,
-                    pausas: []
+                    pausas: datosAsistencia ? datosAsistencia.Pausas : []
                 };
+
+                // Determinar modo del modal
+                if (!datosAsistencia || !datosAsistencia.HoraEntrada) {
+                    this.mostrarModoEntrada();
+                } else if (datosAsistencia.HoraEntrada && !datosAsistencia.HoraSalida) {
+                    this.mostrarModoSalida(datosAsistencia);
+                } else {
+                    document.getElementById('estadoActual').textContent = 'Asistencia ya registrada para hoy';
+                    document.getElementById('btnRegistrarEntrada').style.display = 'none';
+                    document.getElementById('btnRegistrarSalida').style.display = 'none';
+                    document.getElementById('btnPausa').style.display = 'none';
+                    document.getElementById('cronometro').textContent = this.calcularDuracionConPausas(datosAsistencia);
+                    document.querySelector('.turno-selector').style.display = 'none';
+                    document.querySelector('.hora-manual').style.display = 'none';
+                }
+
                 modal.style.display = 'block';
-                return;
-            }
 
-            const datosAsistencia = response.data;
-            
-            // Configurar estado actual
-            asistenciaActual = {
-                practicanteID: practicanteID,
-                asistenciaID: datosAsistencia ? datosAsistencia.AsistenciaID : null,
-                horaEntrada: datosAsistencia ? datosAsistencia.HoraEntrada : null,
-                horaSalida: datosAsistencia ? datosAsistencia.HoraSalida : null,
-                pausaActiva: false,
-                pausaID: null,
-                pausas: datosAsistencia ? datosAsistencia.Pausas : []
-            };
-
-            // Determinar modo del modal
-            if (!datosAsistencia || !datosAsistencia.HoraEntrada) {
-                mostrarModoEntrada();
-            } else if (datosAsistencia.HoraEntrada && !datosAsistencia.HoraSalida) {
-                mostrarModoSalida(datosAsistencia);
-            } else {
-                document.getElementById('estadoActual').textContent = 'Asistencia ya registrada para hoy';
-                document.getElementById('btnRegistrarEntrada').style.display = 'none';
-                document.getElementById('btnRegistrarSalida').style.display = 'none';
-                document.getElementById('btnPausa').style.display = 'none';
-                document.getElementById('cronometro').textContent = calcularDuracionConPausas(datosAsistencia);
-                document.querySelector('.turno-selector').style.display = 'none';
-                document.querySelector('.hora-manual').style.display = 'none';
-            }
-
-            modal.style.display = 'block';
-
-        } catch (err) {
-            mostrarAlerta({tipo:'error', titulo: 'Error', 
-                            mensaje: 'Error al cargar informacion de asistencia'});
-
-        }
-    }
-
-    function resetearEstadoModal() {
-        // Detener cronómetro anterior
-        detenerCronometro();
-        
-        // Resetear variables globales
-        tiempoInicio = null;
-        tiempoPausadoTotal = 0;
-        pausaActivaInicio = null;
-        asistenciaActual = null;
-        
-        // Resetear interfaz
-        document.getElementById('cronometro').textContent = '00:00:00';
-        document.getElementById('pausasContainer').style.display = 'none';
-        document.getElementById('listaPausas').innerHTML = '';
-        
-        // Resetear botón de pausa
-        const btnPausa = document.getElementById('btnPausa');
-        btnPausa.innerHTML = '<i class="fas fa-pause"></i> Pausar';
-        btnPausa.classList.remove('btn-info');
-        btnPausa.classList.add('btn-warning');
-        btnPausa.style.display = 'none';
-    }
-
-    function mostrarModoEntrada() {
-        document.getElementById('estadoActual').textContent = 'Sin registro de entrada';
-        document.getElementById('btnRegistrarEntrada').style.display = 'inline-block';
-        document.getElementById('btnRegistrarSalida').style.display = 'none';
-        document.getElementById('btnPausa').style.display = 'none';
-        document.getElementById('cronometro').textContent = '00:00:00';
-        document.querySelector('.turno-selector').style.display = 'block';
-        document.getElementById('pausasContainer').style.display = 'none';
-        
-        const horaActual = new Date().toTimeString().slice(0, 8);
-        if (horaActual >= TURNOS.TARDE.horaInicio) {
-            document.querySelector('input[name="turno"][value="2"]').checked = true;
-        } else {
-            document.querySelector('input[name="turno"][value="1"]').checked = true;
-        }
-    }
-
-    function mostrarModoSalida(datosAsistencia) {
-        document.getElementById('estadoActual').textContent = `Entrada registrada: ${datosAsistencia.HoraEntrada}`;
-        document.getElementById('btnRegistrarEntrada').style.display = 'none';
-        document.getElementById('btnRegistrarSalida').style.display = 'inline-block';
-        document.getElementById('btnPausa').style.display = 'inline-block';
-        document.querySelector('.turno-selector').style.display = 'none';
-        //document.querySelector('.hora-manual').style.display = 'none';
-        
-        // Calcular tiempo pausado total
-        tiempoPausadoTotal = 0;
-        
-        if (datosAsistencia.Pausas && Array.isArray(datosAsistencia.Pausas)) {
-            datosAsistencia.Pausas.forEach(pausa => {
-                if (pausa.HoraInicio && pausa.HoraFin) {
-                    const inicio = new Date(`1970-01-01T${pausa.HoraInicio}`);
-                    const fin = new Date(`1970-01-01T${pausa.HoraFin}`);
-                    tiempoPausadoTotal += (fin - inicio);
-                } else if (pausa.HoraInicio && !pausa.HoraFin) {
-                    // Hay una pausa activa
-                    asistenciaActual.pausaActiva = true;
-                    asistenciaActual.pausaID = pausa.PausaID;
-                    pausaActivaInicio = new Date(`1970-01-01T${pausa.HoraInicio}`);
-                    
-                    const btn = document.getElementById('btnPausa');
-                    btn.innerHTML = '<i class="fas fa-play"></i> Reanudar';
-                    btn.classList.remove('btn-warning');
-                    btn.classList.add('btn-info');
-                }
-            });
-            
-            if (datosAsistencia.Pausas.length > 0) {
-                mostrarPausas(datosAsistencia.Pausas);
-            }
-        }
-        
-        // Iniciar cronómetro
-        iniciarCronometroDesdeEntrada(datosAsistencia.HoraEntrada);
-    }
-
-    function iniciarCronometroDesdeEntrada(horaEntrada) {
-        const entrada = new Date(`1970-01-01T${horaEntrada}`);
-        const ahora = new Date();
-        const horaActual = new Date(`1970-01-01T${ahora.toTimeString().slice(0, 8)}`);
-        
-        tiempoInicio = horaActual - entrada;
-        
-        if (!asistenciaActual.pausaActiva) {
-            iniciarCronometro();
-        } else {
-            const tiempoHastaPausa = pausaActivaInicio - entrada;
-            actualizarDisplayCronometro(tiempoHastaPausa);
-        }
-    }
-
-    function iniciarCronometro() {
-        if (cronometroInterval) clearInterval(cronometroInterval);
-        
-        const inicioConteo = Date.now();
-        
-        cronometroInterval = setInterval(() => {
-            const tiempoTranscurrido = Date.now() - inicioConteo + tiempoInicio - tiempoPausadoTotal;
-            actualizarDisplayCronometro(tiempoTranscurrido);
-        }, 1000);
-    }
-
-    function actualizarDisplayCronometro(ms) {
-        if (ms < 0) ms = 0;
-        
-        const segundos = Math.floor(ms / 1000);
-        const h = Math.floor(segundos / 3600);
-        const m = Math.floor((segundos % 3600) / 60);
-        const s = segundos % 60;
-        
-        document.getElementById('cronometro').textContent = 
-            `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-
-    function detenerCronometro() {
-        if (cronometroInterval) {
-            clearInterval(cronometroInterval);
-            cronometroInterval = null;
-        }
-    }
-
-    function validarHoraEntrada(hora, turnoID) {
-        const turno = turnoID === 1 ? TURNOS.MANANA : TURNOS.TARDE;
-        
-        if (hora < turno.entradaMinima) {
-            return {
-                valido: false,
-                mensaje: `No puedes registrar entrada antes de las ${turno.entradaMinima.slice(0, 5)} para el turno de ${turno.nombre}`
-            };
-        }
-        
-        if (hora > turno.entradaMaxima) {
-            return {
-                valido: false,
-                mensaje: `No puedes registrar entrada después de las ${turno.entradaMaxima.slice(0, 5)} para el turno de ${turno.nombre}`
-            };
-        }
-        
-        return { valido: true };
-    }
-
-    function validarHoraSalida(hora, turnoID) {
-        const turno = turnoID === 1 ? TURNOS.MANANA : TURNOS.TARDE;
-        
-        if ((turnoID === 1) && (hora < turno.salidaMinima)) {
-            return {
-                valido: false,
-                mensaje: `No puedes registrar salida antes de las ${turno.salidaMinima.slice(0, 5)} para el turno de ${turno.nombre}`
-            };
-        }
-        
-        if (hora > turno.salidaMaxima) {
-            return {
-                valido: false,
-                mensaje: `No puedes registrar salida después de las ${turno.salidaMaxima.slice(0, 5)} para el turno de ${turno.nombre}`
-            };
-        }
-        
-        return { valido: true };
-    }
-
-    function validarSalidaPosteriorEntrada(horaEntrada, horaSalida) {
-        const entrada = new Date(`1970-01-01T${horaEntrada}`);
-        const salida = new Date(`1970-01-01T${horaSalida}`);
-        
-        if (salida <= entrada) {
-            return {
-                valido: false,
-                mensaje: 'La hora de salida debe ser posterior a la hora de entrada'
-            };
-        }
-        
-        return { valido: true };
-    }
-
-    async function registrarEntrada() {
-        try {
-            const turnoSeleccionado = parseInt(document.querySelector('input[name="turno"]:checked').value);
-            let horaRegistro;
-
-            if (document.getElementById('checkHoraManual').checked) {
-                horaRegistro = document.getElementById('inputHoraManual').value;
-                if (!horaRegistro) {
-                    mostrarAlerta({tipo:'error', titulo: 'Error', 
-                            mensaje: 'Por favor ingrese una hora válida'});
-                    return;
-                }
-            } else {
-                horaRegistro = new Date().toTimeString().slice(0, 8);
-            }
-
-            const validacion = validarHoraEntrada(horaRegistro, turnoSeleccionado);
-            if (!validacion.valido) {
-                mostrarAlerta({tipo:'info',  
-                            mensaje: validacion.mensaje});
-                return;
-            }
-
-            const payload = {
-                practicanteID: asistenciaActual.practicanteID,
-                turnoID: turnoSeleccionado,
-                horaEntrada: horaRegistro
-            };
-
-            const res = await api.registrarEntrada(payload);
-
-            if (!res.success) {
-                mostrarAlerta({tipo:'error', titulo: 'Error', 
-                            mensaje: res.message || 'Ocurrió un error al registrar la entrada.'});
-            } else {
-                mostrarAlerta({tipo:'success', titulo: 'Registrado', 
-                            mensaje: 'Entrada registrada exitosamente a las ' + (res.data?.horaRegistrada || horaRegistro)});
-                cerrarModal();
-                await cargarAsistencias();
-            }
-
-        } catch (err) {
-            mostrarAlerta({tipo:'error', titulo: 'Error', 
-                            mensaje: err.message || err });
-        }
-    }
-
-    async function registrarSalida() {
-        try {
-            let horaRegistro;
-
-            if (document.getElementById('checkHoraManual').checked) {
-                horaRegistro = document.getElementById('inputHoraManual').value;
-                if (!horaRegistro) {
-                    mostrarAlerta({tipo:'info', titulo: 'Error', 
-                            mensaje: err.message || err });
-                    return;
-                }
-            } else {
-                horaRegistro = new Date().toTimeString().slice(0, 8);
-            }
-
-            const validacionPosterior = validarSalidaPosteriorEntrada(
-                asistenciaActual.horaEntrada, 
-                horaRegistro
-            );
-            if (!validacionPosterior.valido) {
+            } catch (error) {
                 mostrarAlerta({
                     tipo: 'error',
                     titulo: 'Error',
-                    mensaje: validacionPosterior.mensaje
+                    mensaje: 'Error al cargar información de asistencia'
                 });
-                return;
             }
+        }
 
-            const turnoID = determinarTurnoPorHora(asistenciaActual.horaEntrada);
+        // ============ RESETEAR ESTADO MODAL ============
+        
+        resetearEstadoModal() {
+            this.detenerCronometro();
+            
+            this.state.tiempoInicio = null;
+            this.state.tiempoPausadoTotal = 0;
+            this.state.pausaActivaInicio = null;
+            this.state.asistenciaActual = null;
+            
+            document.getElementById('cronometro').textContent = '00:00:00';
+            document.getElementById('pausasContainer').style.display = 'none';
+            document.getElementById('listaPausas').innerHTML = '';
+            
+            const btnPausa = document.getElementById('btnPausa');
+            btnPausa.innerHTML = '<i class="fas fa-pause"></i> Pausar';
+            btnPausa.classList.remove('btn-info');
+            btnPausa.classList.add('btn-warning');
+            btnPausa.style.display = 'none';
+        }
+
+        // ============ MODOS DEL MODAL ============
+        
+        mostrarModoEntrada() {
+            document.getElementById('estadoActual').textContent = 'Sin registro de entrada';
+            document.getElementById('btnRegistrarEntrada').style.display = 'inline-block';
+            document.getElementById('btnRegistrarSalida').style.display = 'none';
+            document.getElementById('btnPausa').style.display = 'none';
+            document.getElementById('cronometro').textContent = '00:00:00';
+            document.querySelector('.turno-selector').style.display = 'block';
+            document.getElementById('pausasContainer').style.display = 'none';
+            
+            const horaActual = new Date().toTimeString().slice(0, 8);
+            if (horaActual >= TURNOS.TARDE.horaInicio) {
+                document.querySelector('input[name="turno"][value="2"]').checked = true;
+            } else {
+                document.querySelector('input[name="turno"][value="1"]').checked = true;
+            }
+        }
+
+        mostrarModoSalida(datosAsistencia) {
+            document.getElementById('estadoActual').textContent = `Entrada registrada: ${datosAsistencia.HoraEntrada}`;
+            document.getElementById('btnRegistrarEntrada').style.display = 'none';
+            document.getElementById('btnRegistrarSalida').style.display = 'inline-block';
+            document.getElementById('btnPausa').style.display = 'inline-block';
+            document.querySelector('.turno-selector').style.display = 'none';
+            
+            // Calcular tiempo pausado total
+            this.state.tiempoPausadoTotal = 0;
+            
+            if (datosAsistencia.Pausas && Array.isArray(datosAsistencia.Pausas)) {
+                datosAsistencia.Pausas.forEach(pausa => {
+                    if (pausa.HoraInicio && pausa.HoraFin) {
+                        const inicio = new Date(`1970-01-01T${pausa.HoraInicio}`);
+                        const fin = new Date(`1970-01-01T${pausa.HoraFin}`);
+                        this.state.tiempoPausadoTotal += (fin - inicio);
+                    } else if (pausa.HoraInicio && !pausa.HoraFin) {
+                        // Hay una pausa activa
+                        this.state.asistenciaActual.pausaActiva = true;
+                        this.state.asistenciaActual.pausaID = pausa.PausaID;
+                        this.state.pausaActivaInicio = new Date(`1970-01-01T${pausa.HoraInicio}`);
+                        
+                        const btn = document.getElementById('btnPausa');
+                        btn.innerHTML = '<i class="fas fa-play"></i> Reanudar';
+                        btn.classList.remove('btn-warning');
+                        btn.classList.add('btn-info');
+                    }
+                });
+                
+                if (datosAsistencia.Pausas.length > 0) {
+                    this.mostrarPausas(datosAsistencia.Pausas);
+                }
+            }
+            
+            // Iniciar cronómetro
+            this.iniciarCronometroDesdeEntrada(datosAsistencia.HoraEntrada);
+        }
+
+        // ============ CRONÓMETRO ============
+        
+        iniciarCronometroDesdeEntrada(horaEntrada) {
+            const entrada = new Date(`1970-01-01T${horaEntrada}`);
+            const ahora = new Date();
+            const horaActual = new Date(`1970-01-01T${ahora.toTimeString().slice(0, 8)}`);
+            
+            this.state.tiempoInicio = horaActual - entrada;
+            
+            if (!this.state.asistenciaActual.pausaActiva) {
+                this.iniciarCronometro();
+            } else {
+                const tiempoHastaPausa = this.state.pausaActivaInicio - entrada;
+                this.actualizarDisplayCronometro(tiempoHastaPausa);
+            }
+        }
+
+        iniciarCronometro() {
+            if (this.state.cronometroInterval) {
+                clearInterval(this.state.cronometroInterval);
+            }
+            
+            const inicioConteo = Date.now();
+            
+            this.state.cronometroInterval = setInterval(() => {
+                const tiempoTranscurrido = Date.now() - inicioConteo + 
+                                          this.state.tiempoInicio - 
+                                          this.state.tiempoPausadoTotal;
+                this.actualizarDisplayCronometro(tiempoTranscurrido);
+            }, 1000);
+        }
+
+        actualizarDisplayCronometro(ms) {
+            if (ms < 0) ms = 0;
+            
+            const segundos = Math.floor(ms / 1000);
+            const h = Math.floor(segundos / 3600);
+            const m = Math.floor((segundos % 3600) / 60);
+            const s = segundos % 60;
+            
+            document.getElementById('cronometro').textContent = 
+                `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        detenerCronometro() {
+            if (this.state.cronometroInterval) {
+                clearInterval(this.state.cronometroInterval);
+                this.state.cronometroInterval = null;
+            }
+        }
+
+        // ============ VALIDACIONES ============
+        
+        validarHoraEntrada(hora, turnoID) {
             const turno = turnoID === 1 ? TURNOS.MANANA : TURNOS.TARDE;
             
-            // 🔥 AJUSTE AUTOMÁTICO: Si se pasa del horario máximo, ajustar a la hora de fin del turno
-            if (horaRegistro > turno.salidaMaxima) {
-                horaRegistro = turno.horaFin;
+            if (hora < turno.entradaMinima) {
+                return {
+                    valido: false,
+                    mensaje: `No puedes registrar entrada antes de las ${turno.entradaMinima.slice(0, 5)} para el turno de ${turno.nombre}`
+                };
             }
             
-            const validacion = validarHoraSalida(horaRegistro, turnoID);
-            if (!validacion.valido) {
-                mostrarAlerta({tipo:'info',
-                            mensaje: validacion.mensaje});
-                return;
+            if (hora > turno.entradaMaxima) {
+                return {
+                    valido: false,
+                    mensaje: `No puedes registrar entrada después de las ${turno.entradaMaxima.slice(0, 5)} para el turno de ${turno.nombre}`
+                };
             }
+            
+            return { valido: true };
+        }
 
-            const payload = {
-                practicanteID: asistenciaActual.practicanteID,
-                horaSalida: horaRegistro
-            };
+        validarHoraSalida(hora, turnoID) {
+            const turno = turnoID === 1 ? TURNOS.MANANA : TURNOS.TARDE;
+            
+            if ((turnoID === 1) && (hora < turno.salidaMinima)) {
+                return {
+                    valido: false,
+                    mensaje: `No puedes registrar salida antes de las ${turno.salidaMinima.slice(0, 5)} para el turno de ${turno.nombre}`
+                };
+            }
+            
+            if (hora > turno.salidaMaxima) {
+                return {
+                    valido: false,
+                    mensaje: `No puedes registrar salida después de las ${turno.salidaMaxima.slice(0, 5)} para el turno de ${turno.nombre}`
+                };
+            }
+            
+            return { valido: true };
+        }
 
-            const res = await api.registrarSalida(payload);
+        validarSalidaPosteriorEntrada(horaEntrada, horaSalida) {
+            const entrada = new Date(`1970-01-01T${horaEntrada}`);
+            const salida = new Date(`1970-01-01T${horaSalida}`);
+            
+            if (salida <= entrada) {
+                return {
+                    valido: false,
+                    mensaje: 'La hora de salida debe ser posterior a la hora de entrada'
+                };
+            }
+            
+            return { valido: true };
+        }
 
-            if (!res.success) {
-                mostrarAlerta({tipo:'error', titulo: 'Error', 
-                            mensaje: res.message || 'Ocurrió un error al registrar la salida.'});
+        // ============ REGISTRAR ENTRADA ============
+        
+        async registrarEntrada() {
+            try {
+                const turnoSeleccionado = parseInt(document.querySelector('input[name="turno"]:checked').value);
+                let horaRegistro;
+
+                if (document.getElementById('checkHoraManual').checked) {
+                    horaRegistro = document.getElementById('inputHoraManual').value;
+                    if (!horaRegistro) {
+                        mostrarAlerta({
+                            tipo: 'error',
+                            titulo: 'Error',
+                            mensaje: 'Por favor ingrese una hora válida'
+                        });
+                        return;
+                    }
+                } else {
+                    horaRegistro = new Date().toTimeString().slice(0, 8);
+                }
+
+                const validacion = this.validarHoraEntrada(horaRegistro, turnoSeleccionado);
+                if (!validacion.valido) {
+                    mostrarAlerta({
+                        tipo: 'info',
+                        mensaje: validacion.mensaje
+                    });
+                    return;
+                }
+
+                const payload = {
+                    practicanteID: this.state.asistenciaActual.practicanteID,
+                    turnoID: turnoSeleccionado,
+                    horaEntrada: horaRegistro
+                };
+
+                const res = await api.registrarEntrada(payload);
+
+                if (!res.success) {
+                    mostrarAlerta({
+                        tipo: 'error',
+                        titulo: 'Error',
+                        mensaje: res.message || 'Ocurrió un error al registrar la entrada.'
+                    });
+                } else {
+                    mostrarAlerta({
+                        tipo: 'success',
+                        titulo: 'Registrado',
+                        mensaje: 'Entrada registrada exitosamente a las ' + (res.data?.horaRegistrada || horaRegistro)
+                    });
+                    this.cerrarModal();
+                    await this.cargarAsistencias();
+                }
+
+            } catch (error) {
+                mostrarAlerta({
+                    tipo: 'error',
+                    titulo: 'Error',
+                    mensaje: error.message || error
+                });
+            }
+        }
+
+        // ============ REGISTRAR SALIDA ============
+        
+        async registrarSalida() {
+            try {
+                let horaRegistro;
+
+                if (document.getElementById('checkHoraManual').checked) {
+                    horaRegistro = document.getElementById('inputHoraManual').value;
+                    if (!horaRegistro) {
+                        mostrarAlerta({
+                            tipo: 'info',
+                            titulo: 'Error',
+                            mensaje: 'Por favor ingrese una hora válida'
+                        });
+                        return;
+                    }
+                } else {
+                    horaRegistro = new Date().toTimeString().slice(0, 8);
+                }
+
+                const validacionPosterior = this.validarSalidaPosteriorEntrada(
+                    this.state.asistenciaActual.horaEntrada,
+                    horaRegistro
+                );
+                if (!validacionPosterior.valido) {
+                    mostrarAlerta({
+                        tipo: 'error',
+                        titulo: 'Error',
+                        mensaje: validacionPosterior.mensaje
+                    });
+                    return;
+                }
+
+                const turnoID = this.determinarTurnoPorHora(this.state.asistenciaActual.horaEntrada);
+                const turno = turnoID === 1 ? TURNOS.MANANA : TURNOS.TARDE;
+                
+                // Ajuste automático si se pasa del horario máximo
+                if (horaRegistro > turno.salidaMaxima) {
+                    horaRegistro = turno.horaFin;
+                }
+                
+                const validacion = this.validarHoraSalida(horaRegistro, turnoID);
+                if (!validacion.valido) {
+                    mostrarAlerta({
+                        tipo: 'info',
+                        mensaje: validacion.mensaje
+                    });
+                    return;
+                }
+
+                const payload = {
+                    practicanteID: this.state.asistenciaActual.practicanteID,
+                    horaSalida: horaRegistro
+                };
+
+                const res = await api.registrarSalida(payload);
+
+                if (!res.success) {
+                    mostrarAlerta({
+                        tipo: 'error',
+                        titulo: 'Error',
+                        mensaje: res.message || 'Ocurrió un error al registrar la salida.'
+                    });
+                } else {
+                    mostrarAlerta({
+                        tipo: 'success',
+                        titulo: 'Registrado',
+                        mensaje: 'Salida registrada exitosamente a las ' + (res.data?.horaRegistrada || horaRegistro)
+                    });
+                    this.detenerCronometro();
+                    this.cerrarModal();
+                    await this.cargarAsistencias();
+                }
+
+            } catch (error) {
+                mostrarAlerta({
+                    tipo: 'error',
+                    titulo: 'Error',
+                    mensaje: 'Error: ' + (error.message || error)
+                });
+            }
+        }
+
+        // ============ PAUSAS ============
+        
+        async togglePausa() {
+            const btn = document.getElementById('btnPausa');
+            
+            if (!this.state.asistenciaActual.pausaActiva) {
+                const motivo = prompt('Motivo de la pausa (opcional):');
+                
+                if (motivo === null) {
+                    return;
+                }
+                
+                try {
+                    const res = await api.iniciarPausa({
+                        asistenciaID: this.state.asistenciaActual.asistenciaID,
+                        motivo: motivo || ''
+                    });
+
+                    if (res.success) {
+                        this.state.asistenciaActual.pausaActiva = true;
+                        this.state.asistenciaActual.pausaID = res.data.pausaID;
+                        this.state.pausaActivaInicio = new Date(`1970-01-01T${res.data.horaInicio}`);
+                        this.detenerCronometro();
+                        btn.innerHTML = '<i class="fas fa-play"></i> Reanudar';
+                        btn.classList.remove('btn-warning');
+                        btn.classList.add('btn-info');
+                        mostrarAlerta({
+                            tipo: 'success',
+                            titulo: 'Registrado',
+                            mensaje: 'Pausa Iniciada'
+                        });
+                    } else {
+                        mostrarAlerta({
+                            tipo: 'error',
+                            titulo: 'Error',
+                            mensaje: res.message || 'Error al iniciar pausa'
+                        });
+                    }
+                } catch (error) {
+                    mostrarAlerta({
+                        tipo: 'error',
+                        titulo: 'Error',
+                        mensaje: error.message || 'Error al iniciar pausa'
+                    });
+                }
             } else {
-                mostrarAlerta({tipo:'success', titulo: 'Registrado', 
-                            mensaje: 'Salida registrada exitosamente a las ' + (res.data?.horaRegistrada || horaRegistro)});
-                detenerCronometro();
-                cerrarModal();
-                await cargarAsistencias();
+                try {
+                    const res = await api.finalizarPausa({
+                        pausaID: this.state.asistenciaActual.pausaID
+                    });
+
+                    if (res.success) {
+                        const ahora = new Date();
+                        const horaActual = new Date(`1970-01-01T${ahora.toTimeString().slice(0, 8)}`);
+                        const duracionPausa = horaActual - this.state.pausaActivaInicio;
+                        
+                        this.state.tiempoPausadoTotal += duracionPausa;
+                        
+                        this.state.asistenciaActual.pausaActiva = false;
+                        this.state.pausaActivaInicio = null;
+                        
+                        this.iniciarCronometro();
+                        btn.innerHTML = '<i class="fas fa-pause"></i> Pausar';
+                        btn.classList.remove('btn-info');
+                        btn.classList.add('btn-warning');
+                        
+                        mostrarAlerta({
+                            tipo: 'info',
+                            mensaje: 'Pausa Finalizada'
+                        });
+                        
+                        await this.cargarAsistencias();
+                    } else {
+                        mostrarAlerta({
+                            tipo: 'error',
+                            titulo: 'Error',
+                            mensaje: res.message || 'Error al finalizar pausa'
+                        });
+                    }
+                } catch (error) {
+                    mostrarAlerta({
+                        tipo: 'error',
+                        titulo: 'Error',
+                        mensaje: error.message || 'Error al finalizar pausa'
+                    });
+                }
             }
-
-        } catch (err) {
-            mostrarAlerta({tipo:'error', titulo: 'Error', 
-                            mensaje: 'Error: ' + (err.message || err)});
         }
-    }
 
-    function determinarTurnoPorHora(hora) {
-        if (hora >= TURNOS.TARDE.horaInicio) {
-            return TURNOS.TARDE.id;
-        }
-        return TURNOS.MANANA.id;
-    }
-
-    async function togglePausa() {
-        const btn = document.getElementById('btnPausa');
-        
-        if (!asistenciaActual.pausaActiva) {
-            const motivo = prompt('Motivo de la pausa (opcional):');
+        mostrarPausas(pausas) {
+            const container = document.getElementById('pausasContainer');
+            const lista = document.getElementById('listaPausas');
             
-            if (motivo === null) {
+            if (!pausas || pausas.length === 0) {
+                container.style.display = 'none';
                 return;
             }
             
-            try {
-                const res = await api.iniciarPausa({
-                    asistenciaID: asistenciaActual.asistenciaID,
-                    motivo: motivo || ''
+            lista.innerHTML = pausas.map(pausa => `
+                <div class="pausa-item">
+                    <span>${pausa.HoraInicio} - ${pausa.HoraFin || 'En curso'}</span>
+                    <span>${pausa.Motivo || 'Sin motivo'}</span>
+                </div>
+            `).join('');
+            
+            container.style.display = 'block';
+        }
+
+        // ============ FILTROS ============
+        
+        async filtrarPorFecha() {
+            const fecha = document.getElementById('fechaFiltro')?.value;
+            
+            if (!fecha) {
+                mostrarAlerta({
+                    tipo: 'info',
+                    mensaje: 'Por favor selecciona una Fecha'
                 });
-
-                if (res.success) {
-                    asistenciaActual.pausaActiva = true;
-                    asistenciaActual.pausaID = res.data.pausaID;
-                    pausaActivaInicio = new Date(`1970-01-01T${res.data.horaInicio}`);
-                    detenerCronometro();
-                    btn.innerHTML = '<i class="fas fa-play"></i> Reanudar';
-                    btn.classList.remove('btn-warning');
-                    btn.classList.add('btn-info');
-                    mostrarAlerta({tipo:'success', titulo: 'Registrado', 
-                            mensaje: 'Pausa Iniciada'});
-                } else {
-                    mostrarAlerta({tipo:'error', titulo: 'Error', 
-                            mensaje: res.message || 'Error al iniciar pausa'});
-                }
-            } catch (err) {
-                mostrarAlerta({tipo:'error', titulo: 'Error', 
-                            mensaje: res.message || 'Error al iniciar pausa'});
+                return;
             }
-        } else {
+            
+            const fechaLabel = document.getElementById('asistenciaFechaID');
+            if (fechaLabel) {
+                fechaLabel.textContent = `Registro de Asistencia - ${fecha}`;
+            }
+            
+            await this.cargarAsistencias();
+        }
+
+        async limpiarFiltros() {
+            const fechaFiltro = document.getElementById('fechaFiltro');
+            if (fechaFiltro) {
+                fechaFiltro.value = '';
+            }
+            
+            const fechaLabel = document.getElementById('asistenciaFechaID');
+            if (fechaLabel) {
+                fechaLabel.textContent = 'Registro de Asistencia - Hoy';
+            }
+            
+            await this.cargarAsistencias();
+        }
+
+        // ============ CERRAR MODAL ============
+        
+        cerrarModal() {
+            const modal = document.getElementById('modalAsistencia');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            this.resetearEstadoModal();
+        }
+
+        // ============ UTILIDADES ============
+        
+        esHoy(fecha) {
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            
+            const partes = fecha.split('-');
+            const fechaComparar = new Date(partes[0], partes[1] - 1, partes[2]);
+            fechaComparar.setHours(0, 0, 0, 0);
+            
+            return hoy.getTime() === fechaComparar.getTime();
+        }
+
+        calcularDuracionConPausas(row) {
+            if (!row.HoraEntrada || !row.HoraSalida) return '-';
+            
+            const entrada = new Date(`1970-01-01T${row.HoraEntrada}`);
+            const salida = new Date(`1970-01-01T${row.HoraSalida}`);
+            let diffMs = salida - entrada;
+
+            if (row.TiempoPausas) {
+                diffMs -= row.TiempoPausas * 1000;
+            }
+
+            if (diffMs < 0) diffMs = 0;
+
+            const horas = Math.floor(diffMs / (1000 * 60 * 60));
+            const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            const segundos = Math.floor((diffMs % (1000 * 60)) / 1000);
+            
+            return `${horas}h ${minutos}m ${segundos}s`;
+        }
+
+        getBadgeClass(estado) {
+            const clases = {
+                'Presente': 'success',
+                'Ausente': 'danger',
+                'En curso': 'info'
+            };
+            return clases[estado] || 'secondary';
+        }
+
+        determinarTurnoPorHora(hora) {
+            if (hora >= TURNOS.TARDE.horaInicio) {
+                return TURNOS.TARDE.id;
+            }
+            return TURNOS.MANANA.id;
+        }
+
+        actualizarStats(data) {
+            const presentes = data.filter(d => d.HoraEntrada && d.HoraSalida).length;
+            const ausentes = data.filter(d => !d.HoraEntrada).length;
+            
+            const presentesEl = document.getElementById('presentesHoy');
+            const ausentesEl = document.getElementById('ausentesHoy');
+            
+            if (presentesEl) presentesEl.textContent = presentes;
+            if (ausentesEl) ausentesEl.textContent = ausentes;
+        }
+
+        // ============ API PÚBLICA ============
+        
+        async recargar() {
+            if (this.initialized) {
+                await this.cargarAsistencias();
+            }
+        }
+
+        obtenerAsistencias() {
+            return this.state.asistenciasCache;
+        }
+
+        // ============ LIMPIEZA ============
+        
+        async destroy() {
             try {
-                const res = await api.finalizarPausa({
-                    pausaID: asistenciaActual.pausaID
-                });
+                // Detener cronómetro
+                this.detenerCronometro();
 
-                if (res.success) {
-                    const ahora = new Date();
-                    const horaActual = new Date(`1970-01-01T${ahora.toTimeString().slice(0, 8)}`);
-                    const duracionPausa = horaActual - pausaActivaInicio;
-                    
-                    tiempoPausadoTotal += duracionPausa;
-                    
-                    asistenciaActual.pausaActiva = false;
-                    pausaActivaInicio = null;
-                    
-                    iniciarCronometro();
-                    btn.innerHTML = '<i class="fas fa-pause"></i> Pausar';
-                    btn.classList.remove('btn-info');
-                    btn.classList.add('btn-warning');
-                    
-                    mostrarAlerta({tipo:'info', 
-                            mensaje: 'Pausa Finalizada'});
-                    
-                    await cargarAsistencias();
-                } else {
-                    mostrarAlerta({tipo:'error', titulo: 'Error', 
-                            mensaje: res.message || 'Error al finalizar pausa'});
+                // Limpiar event listeners
+                this.state.eventListeners.forEach(({ element, event, handler, options }) => {
+                    if (element) {
+                        element.removeEventListener(event, handler, options);
+                    }
+                });
+                this.state.eventListeners = [];
+
+                // Limpiar estado
+                this.state.tiempoInicio = null;
+                this.state.tiempoPausadoTotal = 0;
+                this.state.asistenciaActual = null;
+                this.state.pausaActivaInicio = null;
+                this.state.asistenciasCache = null;
+
+                // Cerrar modal si está abierto
+                const modal = document.getElementById('modalAsistencia');
+                if (modal && modal.style.display === 'block') {
+                    this.cerrarModal();
                 }
-            } catch (err) {
-                mostrarAlerta({tipo:'error', titulo: 'Error', 
-                            mensaje: res.message || 'Error al finalizar pausa'});
+
+                // Remover modal del DOM
+                if (modal) {
+                    modal.remove();
+                }
+
+                // Limpiar tabla
+                const tbody = document.getElementById('tableAsistenciasBody');
+                if (tbody) {
+                    tbody.innerHTML = '';
+                }
+
+                // Resetear stats
+                const presentesEl = document.getElementById('presentesHoy');
+                const ausentesEl = document.getElementById('ausentesHoy');
+                if (presentesEl) presentesEl.textContent = '0';
+                if (ausentesEl) ausentesEl.textContent = '0';
+
+                // Marcar como no inicializado
+                this.initialized = false;
+
+            } catch (error) {
+                console.error('❌ Error al limpiar módulo Asistencias:', error);
             }
         }
     }
 
-    function mostrarPausas(pausas) {
-        const container = document.getElementById('pausasContainer');
-        const lista = document.getElementById('listaPausas');
+    // ==================== REGISTRO DEL MÓDULO ====================
+    
+    const moduleDefinition = {
+        async init() {
+            const instance = new AsistenciasModule();
+            await instance.init();
+            
+            // Exponer instancia globalmente para compatibilidad
+            window.asistenciasModule = instance;
+            
+            return instance;
+        },
         
-        if (!pausas || pausas.length === 0) {
-            container.style.display = 'none';
-            return;
+        async destroy(instance) {
+            if (instance && instance.destroy) {
+                await instance.destroy();
+                delete window.asistenciasModule;
+            }
         }
-        
-        lista.innerHTML = pausas.map(pausa => `
-            <div class="pausa-item">
-                <span>${pausa.HoraInicio} - ${pausa.HoraFin || 'En curso'}</span>
-                <span>${pausa.Motivo || 'Sin motivo'}</span>
-            </div>
-        `).join('');
-        
-        container.style.display = 'block';
+    };
+
+    if (window.moduleManager) {
+        window.moduleManager.register(MODULE_NAME, moduleDefinition);
+    } else {
+        console.error('❌ ModuleManager no está disponible para módulo Asistencias');
     }
 
-    function cerrarModal() {
-        document.getElementById('modalAsistencia').style.display = 'none';
-        resetearEstadoModal();
-    }
-
-    function actualizarStats(data) {
-        const presentes = data.filter(d => d.HoraEntrada && d.HoraSalida).length;
-        const ausentes = data.filter(d => !d.HoraEntrada).length;
-        document.getElementById('presentesHoy').textContent = presentes;
-        document.getElementById('ausentesHoy').textContent = ausentes;
-    }
-
-    window.onclick = function(event) {
-        const modal = document.getElementById('modalAsistencia');
-        if (event.target === modal) {
-            cerrarModal();
-        }
-    }
-
-    function filtrarPorFecha() {
-        const fecha = document.getElementById('fechaFiltro').value;
-        
-        if (!fecha) {
-            mostrarAlerta({tipo:'info', 
-                            mensaje: 'Por favor selecciona una Fecha'});
-            return;
-        }
-        
-        cargarAsistencias(fecha);
-    }
-
-    function limpiarFiltros() {
-        document.getElementById('fechaFiltro').value = '';
-        cargarAsistencias(); // Sin parámetro = hoy
-    }
-
-    window.filtrarPorFecha = filtrarPorFecha;
-    window.limpiarFiltros = limpiarFiltros;
-    window.abrirModalAsistencia = abrirModalAsistencia;
-    window.cerrarModal = cerrarModal;
-    window.registrarEntrada = registrarEntrada;
-    window.registrarSalida = registrarSalida;
-    window.togglePausa = togglePausa;
-};
-
-
+})();
